@@ -32,6 +32,9 @@ filters:
       - {name: "$.profile.like_words[0]", type: string}
 ```
 
+## Note
+- If the value evaluated by JsonPath is Array or Hash, the value is written as JSON.
+
 ## Dependencies
 - https://github.com/jayway/JsonPath
   - use to evaluate [JsonPath](http://goessner.net/articles/JsonPath/)
