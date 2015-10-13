@@ -1,9 +1,13 @@
 package org.embulk.filter.expand_json;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Maps;
+import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
-import com.jayway.jsonpath.PathNotFoundException;
+import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.ReadContext;
 import org.embulk.config.Config;
 import org.embulk.config.ConfigDefault;
@@ -28,6 +32,7 @@ import org.slf4j.Logger;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class ExpandJsonFilterPlugin
         implements FilterPlugin
@@ -114,6 +119,10 @@ public class ExpandJsonFilterPlugin
                     }
                     pageBuilder.finish();
                 }
+                catch (JsonProcessingException e) {
+                    logger.error(e.getMessage());
+                    throw Throwables.propagate(e);
+                }
             }
 
             @Override
@@ -155,6 +164,7 @@ public class ExpandJsonFilterPlugin
             }
 
             private void setExpandedJsonColumns(PageBuilder pageBuilder, Column originalJsonColumn, List<Column> expandedJsonColumns, HashMap<String, TimestampParser> timestampParserMap)
+                    throws JsonProcessingException
             {
                 final ReadContext json;
                 if (pageReader.isNull(originalJsonColumn)) {
@@ -162,7 +172,9 @@ public class ExpandJsonFilterPlugin
                 }
                 else {
                     String jsonObject = pageReader.getString(originalJsonColumn);
-                    json = JsonPath.parse(jsonObject);
+                    Configuration conf = Configuration.defaultConfiguration();
+                    conf = conf.addOptions(Option.DEFAULT_PATH_LEAF_TO_NULL);
+                    json = JsonPath.using(conf).parse(jsonObject);
                 }
 
                 for (Column expandedJsonColumn: expandedJsonColumns) {
@@ -171,28 +183,49 @@ public class ExpandJsonFilterPlugin
                         continue;
                     }
 
-                    try {
-                        if (Types.STRING.equals(expandedJsonColumn.getType())) {
-                            pageBuilder.setString(expandedJsonColumn, json.read(expandedJsonColumn.getName(), String.class));
-                        }
-                        else if (Types.BOOLEAN.equals(expandedJsonColumn.getType())) {
-                            pageBuilder.setBoolean(expandedJsonColumn, json.read(expandedJsonColumn.getName(), Boolean.class));
-                        }
-                        else if (Types.DOUBLE.equals(expandedJsonColumn.getType())) {
-                            pageBuilder.setDouble(expandedJsonColumn, json.read(expandedJsonColumn.getName(), Double.class));
-                        }
-                        else if (Types.LONG.equals(expandedJsonColumn.getType())) {
-                            pageBuilder.setLong(expandedJsonColumn, json.read(expandedJsonColumn.getName(), Long.class));
-                        }
-                        else if (Types.TIMESTAMP.equals(expandedJsonColumn.getType())) {
-                            TimestampParser parser = timestampParserMap.get(expandedJsonColumn.getName());
-                            pageBuilder.setTimestamp(expandedJsonColumn, parser.parse(json.read(expandedJsonColumn.getName(), String.class)));
-                        }
-                    }
-                    catch (PathNotFoundException e) {
+                    Object value = json.read(expandedJsonColumn.getName());
+                    final String finalValue = writeJsonPathValueAsString(value);
+                    if (finalValue == null) {
                         pageBuilder.setNull(expandedJsonColumn);
                         continue;
                     }
+
+                    if (Types.STRING.equals(expandedJsonColumn.getType())) {
+                        pageBuilder.setString(expandedJsonColumn, finalValue);
+                    }
+                    else if (Types.BOOLEAN.equals(expandedJsonColumn.getType())) {
+                        pageBuilder.setBoolean(expandedJsonColumn, Boolean.parseBoolean(finalValue));
+                    }
+                    else if (Types.DOUBLE.equals(expandedJsonColumn.getType())) {
+                        pageBuilder.setDouble(expandedJsonColumn, Double.parseDouble(finalValue));
+                    }
+                    else if (Types.LONG.equals(expandedJsonColumn.getType())) {
+                        pageBuilder.setLong(expandedJsonColumn, Long.parseLong(finalValue));
+                    }
+                    else if (Types.TIMESTAMP.equals(expandedJsonColumn.getType())) {
+                        TimestampParser parser = timestampParserMap.get(expandedJsonColumn.getName());
+                        pageBuilder.setTimestamp(expandedJsonColumn, parser.parse(finalValue));
+                    }
+                }
+            }
+
+            private String writeJsonPathValueAsString(Object value)
+                    throws JsonProcessingException
+            {
+                if (value == null) {
+                    return null;
+                }
+                else if (value instanceof List) {
+                    return new ObjectMapper().writeValueAsString(value);
+                }
+                else if (value instanceof Map) {
+                    return new ObjectMapper().writeValueAsString(value);
+                }
+                else if (value instanceof String) {
+                    return (String) value;
+                }
+                else {
+                    return String.valueOf(value);
                 }
             }
 
@@ -229,6 +262,11 @@ public class ExpandJsonFilterPlugin
         }
 
         return new Schema(builder.build());
+    }
+
+    private void logging(Object object)
+    {
+        logger.info("{}", object.getClass());
     }
 
     private HashMap<String, TimestampParser> buildTimestampParserMap(ScriptingContainer jruby, List<ColumnConfig> expandedColumnConfigs, String timeZone)
