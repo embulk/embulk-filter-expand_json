@@ -1,0 +1,35 @@
+in:
+  type: file
+  path_prefix: example/data.tsv
+  parser:
+    type: csv
+    delimiter: "\t"
+    charset: UTF-8
+    newline: CRLF
+    null_string: 'NULL'
+    skip_header_lines: 1
+    comment_line_marker: '#'
+    columns:
+      - {name: time,  type: timestamp, format: "%Y-%m-%d"}
+      - {name: id, type: long}
+      - {name: name, type: string}
+      - {name: score, type: double}
+      - {name: json_payload, type: string}
+
+filters:
+  - type: expand_json
+    json_column_name: json_payload
+    expanded_columns:
+      - {name: "$.phone_numbers", type: string}
+      - {name: "$.app_id", type: long}
+      - {name: "$.point", type: double}
+      - {name: "$.created_at", type: timestamp, format: "%Y-%m-%d"}
+      - {name: "$.profile.anniversary.et", type: string}
+      - {name: "$.profile.anniversary.voluptatem", type: string}
+      - {name: "$.profile.like_words[1]", type: string}
+      - {name: "$.profile.like_words[2]", type: string}
+      - {name: "$.profile.like_words[0]", type: string}
+
+out:
+  type: stdout
+
