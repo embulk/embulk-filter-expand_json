@@ -25,10 +25,10 @@ filters:
       - {name: "$.point", type: double}
       - {name: "$.created_at", type: timestamp, format: "%Y-%m-%d"}
       - {name: "$.profile.anniversary.et", type: string}
-      - {name: "$.profile.anniversary.voluptatem", type: string}
+      - {name: "$.profile.anniversary", type: string}
       - {name: "$.profile.like_words[1]", type: string}
       - {name: "$.profile.like_words[2]", type: string}
-      - {name: "$.profile.like_words[0]", type: string}
+      - {name: "$.profile.like_words", type: string}
 
 out:
   type: stdout
