@@ -264,11 +264,6 @@ public class ExpandJsonFilterPlugin
         return new Schema(builder.build());
     }
 
-    private void logging(Object object)
-    {
-        logger.info("{}", object.getClass());
-    }
-
     private HashMap<String, TimestampParser> buildTimestampParserMap(ScriptingContainer jruby, List<ColumnConfig> expandedColumnConfigs, String timeZone)
     {
         final HashMap<String, TimestampParser> timestampParserMap = Maps.newHashMap();
