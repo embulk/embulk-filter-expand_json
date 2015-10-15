@@ -174,6 +174,7 @@ public class ExpandJsonFilterPlugin
                     String jsonObject = pageReader.getString(originalJsonColumn);
                     Configuration conf = Configuration.defaultConfiguration();
                     conf = conf.addOptions(Option.DEFAULT_PATH_LEAF_TO_NULL);
+                    conf = conf.addOptions(Option.SUPPRESS_EXCEPTIONS);
                     json = JsonPath.using(conf).parse(jsonObject);
                 }
 
