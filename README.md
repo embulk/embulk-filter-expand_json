@@ -9,7 +9,7 @@ expand columns having json into multiple columns
 ## Configuration
 
 - **json_column_name**: a column name having json to be expanded (string, required)
-- **root**: root property to start fetching each entries, specify in [JsonPath](http://goessner.net/articles/JsonPath/) style (string, default: `\"$.\"`)
+- **root**: root property to start fetching each entries, specify in [JsonPath](http://goessner.net/articles/JsonPath/) style (string, default: `"$."`)
 - **expanded_columns**: columns expanded into multiple columns (array of hash, required)
   - **name**: name of the column. you can define [JsonPath](http://goessner.net/articles/JsonPath/) style.
   - **type**: type of the column (see below)
