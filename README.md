@@ -14,6 +14,18 @@ expand columns having json into multiple columns
   - **type**: type of the column (see below)
   - **format**: format of the timestamp if type is timestamp
 
+---
+**type of the column**
+
+|name|description|
+|:---|:---|
+|boolean|true or false|
+|long|64-bit signed integers|
+|timestamp|Date and time with nano-seconds precision|
+|double|64-bit floating point numbers|
+|string|Strings|
+
+
 ## Example
 
 ```yaml
