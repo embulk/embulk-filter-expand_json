@@ -45,6 +45,10 @@ public class ExpandJsonFilterPlugin
         @Config("json_column_name")
         public String getJsonColumnName();
 
+        @Config("root")
+        @ConfigDefault("\"$.\"")
+        public String getRoot();
+
         @Config("expanded_columns")
         public List<ColumnConfig> getExpandedColumns();
 
@@ -52,10 +56,6 @@ public class ExpandJsonFilterPlugin
         @ConfigDefault("\"UTC\"")
         public String getTimeZone();
 
-//        TODO if needed: add the original column name as the prefix of expanded
-//        @Config("add_original_column_name_as_prefix")
-//        @ConfigDefault("false")
-//        public String getOption2();
     }
 
     @Override
