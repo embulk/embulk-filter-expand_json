@@ -63,11 +63,7 @@ public class ExpandJsonFilterPlugin
             FilterPlugin.Control control)
     {
         PluginTask task = config.loadConfig(PluginTask.class);
-
-        Schema outputSchema = buildOutputSchema(inputSchema,
-                                                task.getJsonColumnName(),
-                                                task.getExpandedColumns());
-
+        Schema outputSchema = buildOutputSchema(task, inputSchema);
         control.run(task.dump(), outputSchema);
     }
 
@@ -76,174 +72,20 @@ public class ExpandJsonFilterPlugin
             final Schema outputSchema, final PageOutput output)
     {
         final PluginTask task = taskSource.loadTask(PluginTask.class);
-
-        final List<Column> inputColumns = inputSchema.getColumns();
-
-        final List<Column> inputColumnsExceptExpandedJsonColumn = new ArrayList<>();
-        final List<Column> expandedJsonColumns = new ArrayList<>();
-
-        for (Column column : outputSchema.getColumns()) {
-            if (inputColumns.contains(column)) {
-                inputColumnsExceptExpandedJsonColumn.add(column);
-            }
-            else {
-                expandedJsonColumns.add(column);
-            }
-        }
-
-        Column temporaryJsonColumn = null;
-        for (Column column: inputColumns) {
-            if (column.getName().contentEquals(task.getJsonColumnName())) {
-                temporaryJsonColumn = column;
-            }
-        }
-        final Column jsonColumn = temporaryJsonColumn;
-
-        final HashMap<String, TimestampParser> timestampParserMap = buildTimestampParserMap(task.getJRuby(),
-                                                                                            task.getExpandedColumns(),
-                                                                                            task.getTimeZone());
-        return new PageOutput()
-        {
-            private PageReader pageReader = new PageReader(inputSchema);
-
-            @Override
-            public void add(Page page)
-            {
-                try (PageBuilder pageBuilder = new PageBuilder(Exec.getBufferAllocator(), outputSchema, output)) {
-                    pageReader.setPage(page);
-
-                    while (pageReader.nextRecord()) {
-                        setInputColumnsExceptFlattenJsonColumns(pageBuilder, inputColumnsExceptExpandedJsonColumn);
-                        setExpandedJsonColumns(pageBuilder, jsonColumn, expandedJsonColumns, timestampParserMap);
-                        pageBuilder.addRecord();
-                    }
-                    pageBuilder.finish();
-                }
-                catch (JsonProcessingException e) {
-                    logger.error(e.getMessage());
-                    throw Throwables.propagate(e);
-                }
-            }
-
-            @Override
-            public void finish()
-            {
-                output.finish();
-            }
-
-            @Override
-            public void close()
-            {
-                pageReader.close();
-                output.close();
-            }
-
-            private void setInputColumnsExceptFlattenJsonColumns(PageBuilder pageBuilder, List<Column> inputColumnsExceptExpandedJsonColumn) {
-                for (Column inputColumn: inputColumnsExceptExpandedJsonColumn) {
-                    if (pageReader.isNull(inputColumn)) {
-                        pageBuilder.setNull(inputColumn);
-                        continue;
-                    }
-
-                    if (Types.STRING.equals(inputColumn.getType())) {
-                        pageBuilder.setString(inputColumn, pageReader.getString(inputColumn));
-                    }
-                    else if (Types.BOOLEAN.equals(inputColumn.getType())) {
-                        pageBuilder.setBoolean(inputColumn, pageReader.getBoolean(inputColumn));
-                    }
-                    else if (Types.DOUBLE.equals(inputColumn.getType())) {
-                        pageBuilder.setDouble(inputColumn, pageReader.getDouble(inputColumn));
-                    }
-                    else if (Types.LONG.equals(inputColumn.getType())) {
-                        pageBuilder.setLong(inputColumn, pageReader.getLong(inputColumn));
-                    }
-                    else if (Types.TIMESTAMP.equals(inputColumn.getType())) {
-                        pageBuilder.setTimestamp(inputColumn, pageReader.getTimestamp(inputColumn));
-                    }
-                }
-            }
-
-            private void setExpandedJsonColumns(PageBuilder pageBuilder, Column originalJsonColumn, List<Column> expandedJsonColumns, HashMap<String, TimestampParser> timestampParserMap)
-                    throws JsonProcessingException
-            {
-                final ReadContext json;
-                if (pageReader.isNull(originalJsonColumn)) {
-                    json = null;
-                }
-                else {
-                    String jsonObject = pageReader.getString(originalJsonColumn);
-                    Configuration conf = Configuration.defaultConfiguration();
-                    conf = conf.addOptions(Option.DEFAULT_PATH_LEAF_TO_NULL);
-                    conf = conf.addOptions(Option.SUPPRESS_EXCEPTIONS);
-                    json = JsonPath.using(conf).parse(jsonObject);
-                }
-
-                for (Column expandedJsonColumn: expandedJsonColumns) {
-                    if (json == null) {
-                        pageBuilder.setNull(expandedJsonColumn);
-                        continue;
-                    }
-
-                    Object value = json.read(expandedJsonColumn.getName());
-                    final String finalValue = writeJsonPathValueAsString(value);
-                    if (finalValue == null) {
-                        pageBuilder.setNull(expandedJsonColumn);
-                        continue;
-                    }
-
-                    if (Types.STRING.equals(expandedJsonColumn.getType())) {
-                        pageBuilder.setString(expandedJsonColumn, finalValue);
-                    }
-                    else if (Types.BOOLEAN.equals(expandedJsonColumn.getType())) {
-                        pageBuilder.setBoolean(expandedJsonColumn, Boolean.parseBoolean(finalValue));
-                    }
-                    else if (Types.DOUBLE.equals(expandedJsonColumn.getType())) {
-                        pageBuilder.setDouble(expandedJsonColumn, Double.parseDouble(finalValue));
-                    }
-                    else if (Types.LONG.equals(expandedJsonColumn.getType())) {
-                        pageBuilder.setLong(expandedJsonColumn, Long.parseLong(finalValue));
-                    }
-                    else if (Types.TIMESTAMP.equals(expandedJsonColumn.getType())) {
-                        TimestampParser parser = timestampParserMap.get(expandedJsonColumn.getName());
-                        pageBuilder.setTimestamp(expandedJsonColumn, parser.parse(finalValue));
-                    }
-                }
-            }
-
-            private String writeJsonPathValueAsString(Object value)
-                    throws JsonProcessingException
-            {
-                if (value == null) {
-                    return null;
-                }
-                else if (value instanceof List) {
-                    return new ObjectMapper().writeValueAsString(value);
-                }
-                else if (value instanceof Map) {
-                    return new ObjectMapper().writeValueAsString(value);
-                }
-                else if (value instanceof String) {
-                    return (String) value;
-                }
-                else {
-                    return String.valueOf(value);
-                }
-            }
-
-        };
+        return new FilteredPageOutput(task, inputSchema, outputSchema, output);
     }
 
-    private Schema buildOutputSchema(Schema inputSchema, String jsonColumnName, List<ColumnConfig> expandedColumnConfigs)
+    private Schema buildOutputSchema(PluginTask task, Schema inputSchema)
     {
         ImmutableList.Builder<Column> builder = ImmutableList.builder();
 
         int i = 0; // columns index
         for (Column inputColumn: inputSchema.getColumns()) {
-            if (inputColumn.getName().contentEquals(jsonColumnName)) {
+            if (inputColumn.getName().contentEquals(task.getJsonColumnName())) {
                 logger.info("removed column: name: {}, type: {}",
                             inputColumn.getName(),
                             inputColumn.getType());
-                for (ColumnConfig expandedColumnConfig: expandedColumnConfigs) {
+                for (ColumnConfig expandedColumnConfig: task.getExpandedColumns()) {
                     logger.info("added column: name: {}, type: {}, options: {}",
                                 expandedColumnConfig.getName(),
                                 expandedColumnConfig.getType(),
@@ -265,21 +107,4 @@ public class ExpandJsonFilterPlugin
         return new Schema(builder.build());
     }
 
-    private HashMap<String, TimestampParser> buildTimestampParserMap(ScriptingContainer jruby, List<ColumnConfig> expandedColumnConfigs, String timeZone)
-    {
-        final HashMap<String, TimestampParser> timestampParserMap = Maps.newHashMap();
-        for (ColumnConfig expandedColumnConfig: expandedColumnConfigs) {
-            if (Types.TIMESTAMP.equals(expandedColumnConfig.getType())) {
-                String format = expandedColumnConfig.getOption().get(String.class, "format");
-                DateTimeZone timezone = DateTimeZone.forID(timeZone);
-                TimestampParser parser = new TimestampParser(jruby, format, timezone);
-
-                String columnName = expandedColumnConfig.getName();
-
-                timestampParserMap.put(columnName, parser);
-            }
-        }
-
-        return timestampParserMap;
-    }
 }
