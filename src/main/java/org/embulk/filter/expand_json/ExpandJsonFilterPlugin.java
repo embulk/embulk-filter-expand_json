@@ -1,14 +1,6 @@
 package org.embulk.filter.expand_json;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
-import com.jayway.jsonpath.Configuration;
-import com.jayway.jsonpath.JsonPath;
-import com.jayway.jsonpath.Option;
-import com.jayway.jsonpath.ReadContext;
 import org.embulk.config.Config;
 import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigSource;
@@ -18,21 +10,12 @@ import org.embulk.spi.Column;
 import org.embulk.spi.ColumnConfig;
 import org.embulk.spi.Exec;
 import org.embulk.spi.FilterPlugin;
-import org.embulk.spi.Page;
-import org.embulk.spi.PageBuilder;
 import org.embulk.spi.PageOutput;
-import org.embulk.spi.PageReader;
 import org.embulk.spi.Schema;
 import org.embulk.spi.time.TimestampParser;
-import org.embulk.spi.type.Types;
-import org.joda.time.DateTimeZone;
-import org.jruby.embed.ScriptingContainer;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 public class ExpandJsonFilterPlugin
         implements FilterPlugin
