@@ -22,12 +22,11 @@ import org.embulk.spi.type.Types;
 import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.embulk.filter.expand_json.ExpandJsonFilterPlugin.*;
+import static org.embulk.filter.expand_json.ExpandJsonFilterPlugin.PluginTask;
 
 /**
  * Created by takahiro.nakayama on 10/19/15.
@@ -85,7 +84,7 @@ public class FilteredPageOutput
             pageReader.setPage(page);
 
             while (pageReader.nextRecord()) {
-                setInputColumnsExceptFlattenJsonColumns(pageBuilder, inputColumnsExceptExpandedJsonColumn);
+                setInputColumnsExceptExpandedJsonColumns(pageBuilder, inputColumnsExceptExpandedJsonColumn);
                 setExpandedJsonColumns(pageBuilder, jsonColumn, expandedJsonColumns, timestampParserHashMap);
                 pageBuilder.addRecord();
             }
@@ -115,7 +114,13 @@ public class FilteredPageOutput
         final HashMap<String, TimestampParser> timestampParserHashMap = Maps.newHashMap();
         for (ColumnConfig expandedColumnConfig: task.getExpandedColumns()) {
             if (Types.TIMESTAMP.equals(expandedColumnConfig.getType())) {
-                String format = expandedColumnConfig.getOption().get(String.class, "format");
+                String format;
+                if (expandedColumnConfig.getOption().has("format")) {
+                    format = expandedColumnConfig.getOption().get(String.class, "format");
+                }
+                else {
+                    format = task.getDefaultTimestampFormat();
+                }
                 DateTimeZone timezone = DateTimeZone.forID(task.getTimeZone());
                 TimestampParser parser = new TimestampParser(task.getJRuby(), format, timezone);
 
@@ -128,7 +133,7 @@ public class FilteredPageOutput
         return timestampParserHashMap;
     }
     
-    private void setInputColumnsExceptFlattenJsonColumns(PageBuilder pageBuilder, List<Column> inputColumnsExceptExpandedJsonColumn) {
+    private void setInputColumnsExceptExpandedJsonColumns(PageBuilder pageBuilder, List<Column> inputColumnsExceptExpandedJsonColumn) {
         for (Column inputColumn: inputColumnsExceptExpandedJsonColumn) {
             if (pageReader.isNull(inputColumn)) {
                 pageBuilder.setNull(inputColumn);
