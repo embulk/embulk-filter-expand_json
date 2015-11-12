@@ -114,7 +114,13 @@ public class FilteredPageOutput
         final HashMap<String, TimestampParser> timestampParserHashMap = Maps.newHashMap();
         for (ColumnConfig expandedColumnConfig: task.getExpandedColumns()) {
             if (Types.TIMESTAMP.equals(expandedColumnConfig.getType())) {
-                String format = expandedColumnConfig.getOption().get(String.class, "format");
+                String format;
+                if (expandedColumnConfig.getOption().has("format")) {
+                    format = expandedColumnConfig.getOption().get(String.class, "format");
+                }
+                else {
+                    format = task.getDefaultTimestampFormat();
+                }
                 DateTimeZone timezone = DateTimeZone.forID(task.getTimeZone());
                 TimestampParser parser = new TimestampParser(task.getJRuby(), format, timezone);
 
