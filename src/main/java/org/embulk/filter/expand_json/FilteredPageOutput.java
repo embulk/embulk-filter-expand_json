@@ -84,7 +84,7 @@ public class FilteredPageOutput
             pageReader.setPage(page);
 
             while (pageReader.nextRecord()) {
-                setInputColumnsExceptFlattenJsonColumns(pageBuilder, inputColumnsExceptExpandedJsonColumn);
+                setInputColumnsExceptExpandedJsonColumns(pageBuilder, inputColumnsExceptExpandedJsonColumn);
                 setExpandedJsonColumns(pageBuilder, jsonColumn, expandedJsonColumns, timestampParserHashMap);
                 pageBuilder.addRecord();
             }
@@ -133,7 +133,7 @@ public class FilteredPageOutput
         return timestampParserHashMap;
     }
     
-    private void setInputColumnsExceptFlattenJsonColumns(PageBuilder pageBuilder, List<Column> inputColumnsExceptExpandedJsonColumn) {
+    private void setInputColumnsExceptExpandedJsonColumns(PageBuilder pageBuilder, List<Column> inputColumnsExceptExpandedJsonColumn) {
         for (Column inputColumn: inputColumnsExceptExpandedJsonColumn) {
             if (pageReader.isNull(inputColumn)) {
                 pageBuilder.setNull(inputColumn);
