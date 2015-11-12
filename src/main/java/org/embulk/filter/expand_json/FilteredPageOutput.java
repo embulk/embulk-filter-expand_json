@@ -22,12 +22,11 @@ import org.embulk.spi.type.Types;
 import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import static org.embulk.filter.expand_json.ExpandJsonFilterPlugin.*;
+import static org.embulk.filter.expand_json.ExpandJsonFilterPlugin.PluginTask;
 
 /**
  * Created by takahiro.nakayama on 10/19/15.
