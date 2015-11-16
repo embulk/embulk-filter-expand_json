@@ -164,10 +164,12 @@ public class FilteredPageOutput
         return unchangedColumnsBuilder.build();
     }
 
-        Column temporaryJsonColumn = null;
+    private Column initializeJsonColumn(PluginTask task, Schema inputSchema)
+    {
+        Column jsonColumn = null;
         for (Column column: inputSchema.getColumns()) {
             if (column.getName().contentEquals(task.getJsonColumnName())) {
-                temporaryJsonColumn = column;
+                jsonColumn = column;
             }
         }
         return jsonColumn;
