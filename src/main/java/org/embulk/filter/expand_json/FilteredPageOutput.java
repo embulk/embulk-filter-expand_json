@@ -104,10 +104,8 @@ public class FilteredPageOutput
 
 
     private final Logger logger = Exec.getLogger(FilteredPageOutput.class);
-    private final String jsonPathRoot;
-    private final List<Column> inputColumnsExceptExpandedJsonColumn;
-    private final List<Column> expandedJsonColumns;
-    private final HashMap<String, TimestampParser> timestampParserHashMap;
+    private final List<UnchangedColumn> unchangedColumns;
+    private final List<ExpandedColumn> expandedColumns;
     private final Column jsonColumn;
     private final PageReader pageReader;
     private final Schema inputSchema;
@@ -115,22 +113,57 @@ public class FilteredPageOutput
     private final PageBuilder pageBuilder;
     private final PageOutput pageOutput;
 
-    FilteredPageOutput(PluginTask task, Schema inputSchema, Schema outputSchema, PageOutput pageOutput)
+    private List<ExpandedColumn> initializeExpandedColumns(PluginTask task,
+                                                           Schema outputSchema)
     {
-        this.jsonPathRoot = task.getRoot();
+        ImmutableList.Builder<ExpandedColumn> expandedJsonColumnsBuilder = ImmutableList.builder();
+        for (Column outputColumn : outputSchema.getColumns()) {
+            for (ColumnConfig expandedColumnConfig : task.getExpandedColumns()) {
+                if (outputColumn.getName().equals(expandedColumnConfig.getName())) {
 
-        ImmutableList.Builder<Column> inputColumnsExceptExpandedJsonColumnBuilder = ImmutableList.builder();
-        ImmutableList.Builder<Column> expandedJsonColumnsBuilder = ImmutableList.builder();
-        for (Column column : outputSchema.getColumns()) {
-            if (inputSchema.getColumns().contains(column)) {
-                inputColumnsExceptExpandedJsonColumnBuilder.add(column);
-            }
-            else {
-                expandedJsonColumnsBuilder.add(column);
+                    TimestampParser timestampParser = null;
+                    if (Types.TIMESTAMP.equals(expandedColumnConfig.getType())) {
+                        String format;
+                        if (expandedColumnConfig.getOption().has("format")) {
+                            format = expandedColumnConfig.getOption().get(String.class, "format");
+                        }
+                        else {
+                            format = task.getDefaultTimestampFormat();
+                        }
+                        DateTimeZone timezone = DateTimeZone.forID(task.getTimeZone());
+                        timestampParser = new TimestampParser(task.getJRuby(), format, timezone);
+                    }
+
+                    ExpandedColumn expandedColumn = new ExpandedColumn(outputColumn.getName(),
+                                                                       outputColumn,
+                                                                       task.getRoot() + outputColumn.getName(),
+                                                                       Optional.fromNullable(timestampParser));
+                    expandedJsonColumnsBuilder.add(expandedColumn);
+                }
             }
         }
-        this.inputColumnsExceptExpandedJsonColumn = inputColumnsExceptExpandedJsonColumnBuilder.build();
-        this.expandedJsonColumns = expandedJsonColumnsBuilder.build();
+        return expandedJsonColumnsBuilder.build();
+    }
+
+    private List<UnchangedColumn> initializeUnchangedColumns(Schema inputSchema,
+                                                             Schema outputSchema,
+                                                             Column excludeColumn)
+    {
+        ImmutableList.Builder<UnchangedColumn> unchangedColumnsBuilder = ImmutableList.builder();
+        for (Column outputColumn : outputSchema.getColumns()) {
+            for (Column inputColumn : inputSchema.getColumns()) {
+                if (inputColumn.getName().equals(outputColumn.getName()) &&
+                        !excludeColumn.getName().equals(outputColumn.getName())) {
+
+                    UnchangedColumn unchangedColumn = new UnchangedColumn(outputColumn.getName(),
+                                                                          inputColumn,
+                                                                          outputColumn);
+                    unchangedColumnsBuilder.add(unchangedColumn);
+                }
+            }
+        }
+        return unchangedColumnsBuilder.build();
+    }
 
         Column temporaryJsonColumn = null;
         for (Column column: inputSchema.getColumns()) {
@@ -138,7 +171,25 @@ public class FilteredPageOutput
                 temporaryJsonColumn = column;
             }
         }
-        this.jsonColumn = temporaryJsonColumn;
+        return jsonColumn;
+    }
+
+    private ParseContext initializeParseContext()
+    {
+        Configuration conf = Configuration.defaultConfiguration();
+        conf = conf.addOptions(Option.DEFAULT_PATH_LEAF_TO_NULL);
+        conf = conf.addOptions(Option.SUPPRESS_EXCEPTIONS);
+        return JsonPath.using(conf);
+    }
+
+    FilteredPageOutput(PluginTask task, Schema inputSchema, Schema outputSchema, PageOutput pageOutput)
+    {
+        this.jsonColumn = initializeJsonColumn(task, inputSchema);
+        this.unchangedColumns = initializeUnchangedColumns(inputSchema,
+                                                           outputSchema,
+                                                           jsonColumn);
+        this.expandedColumns = initializeExpandedColumns(task,
+                                                         outputSchema);
 
         this.timestampParserHashMap = buildTimestampParserHashMap(task);
         this.pageReader = new PageReader(inputSchema);
@@ -155,8 +206,8 @@ public class FilteredPageOutput
             pageReader.setPage(page);
 
             while (pageReader.nextRecord()) {
-                setInputColumnsExceptExpandedJsonColumns(pageBuilder, inputColumnsExceptExpandedJsonColumn);
-                setExpandedJsonColumns(pageBuilder, jsonColumn, expandedJsonColumns, timestampParserHashMap);
+                setExpandedJsonColumns();
+                setUnchangedColumns();
                 pageBuilder.addRecord();
             }
         }
@@ -181,60 +232,40 @@ public class FilteredPageOutput
         pageOutput.close();
     }
 
-    private HashMap<String, TimestampParser> buildTimestampParserHashMap(PluginTask task)
-    {
-        final HashMap<String, TimestampParser> timestampParserHashMap = Maps.newHashMap();
-        for (ColumnConfig expandedColumnConfig: task.getExpandedColumns()) {
-            if (Types.TIMESTAMP.equals(expandedColumnConfig.getType())) {
-                String format;
-                if (expandedColumnConfig.getOption().has("format")) {
-                    format = expandedColumnConfig.getOption().get(String.class, "format");
-                }
-                else {
-                    format = task.getDefaultTimestampFormat();
-                }
-                DateTimeZone timezone = DateTimeZone.forID(task.getTimeZone());
-                TimestampParser parser = new TimestampParser(task.getJRuby(), format, timezone);
-
-                String columnName = expandedColumnConfig.getName();
-
-                timestampParserHashMap.put(columnName, parser);
-            }
-        }
-
-        return timestampParserHashMap;
-    }
     
-    private void setInputColumnsExceptExpandedJsonColumns(PageBuilder pageBuilder, List<Column> inputColumnsExceptExpandedJsonColumn) {
-        for (Column inputColumn: inputColumnsExceptExpandedJsonColumn) {
+    private void setUnchangedColumns() {
+        for (UnchangedColumn unchangedColumn : unchangedColumns) {
+            Column inputColumn = unchangedColumn.getInputColumn();
+            Column outputColumn = unchangedColumn.getOutputColumn();
+
             if (pageReader.isNull(inputColumn)) {
-                pageBuilder.setNull(inputColumn);
+                pageBuilder.setNull(outputColumn);
                 continue;
             }
 
-            if (Types.STRING.equals(inputColumn.getType())) {
-                pageBuilder.setString(inputColumn, pageReader.getString(inputColumn));
+            if (Types.STRING.equals(outputColumn.getType())) {
+                pageBuilder.setString(outputColumn, pageReader.getString(inputColumn));
             }
-            else if (Types.BOOLEAN.equals(inputColumn.getType())) {
-                pageBuilder.setBoolean(inputColumn, pageReader.getBoolean(inputColumn));
+            else if (Types.BOOLEAN.equals(outputColumn.getType())) {
+                pageBuilder.setBoolean(outputColumn, pageReader.getBoolean(inputColumn));
             }
-            else if (Types.DOUBLE.equals(inputColumn.getType())) {
-                pageBuilder.setDouble(inputColumn, pageReader.getDouble(inputColumn));
+            else if (Types.DOUBLE.equals(outputColumn.getType())) {
+                pageBuilder.setDouble(outputColumn, pageReader.getDouble(inputColumn));
             }
-            else if (Types.LONG.equals(inputColumn.getType())) {
-                pageBuilder.setLong(inputColumn, pageReader.getLong(inputColumn));
+            else if (Types.LONG.equals(outputColumn.getType())) {
+                pageBuilder.setLong(outputColumn, pageReader.getLong(inputColumn));
             }
-            else if (Types.TIMESTAMP.equals(inputColumn.getType())) {
-                pageBuilder.setTimestamp(inputColumn, pageReader.getTimestamp(inputColumn));
+            else if (Types.TIMESTAMP.equals(outputColumn.getType())) {
+                pageBuilder.setTimestamp(outputColumn, pageReader.getTimestamp(inputColumn));
             }
         }
     }
 
-    private void setExpandedJsonColumns(PageBuilder pageBuilder, Column originalJsonColumn, List<Column> expandedJsonColumns, HashMap<String, TimestampParser> timestampParserMap)
+    private void setExpandedJsonColumns()
             throws JsonProcessingException
     {
         final ReadContext json;
-        if (pageReader.isNull(originalJsonColumn)) {
+        if (pageReader.isNull(jsonColumn)) {
             json = null;
         }
         else {
@@ -245,34 +276,39 @@ public class FilteredPageOutput
             json = JsonPath.using(conf).parse(jsonObject);
         }
 
-        for (Column expandedJsonColumn: expandedJsonColumns) {
+        for (ExpandedColumn expandedJsonColumn: expandedColumns) {
             if (json == null) {
-                pageBuilder.setNull(expandedJsonColumn);
+                pageBuilder.setNull(expandedJsonColumn.getColumn());
                 continue;
             }
 
-            Object value = json.read(jsonPathRoot + expandedJsonColumn.getName());
-            final String finalValue = writeJsonPathValueAsString(value);
+            Object value = json.read(expandedJsonColumn.getJsonPath());
+            final String finalValue = convertJsonNodeAsString(value);
             if (finalValue == null) {
-                pageBuilder.setNull(expandedJsonColumn);
+                pageBuilder.setNull(expandedJsonColumn.getColumn());
                 continue;
             }
 
-            if (Types.STRING.equals(expandedJsonColumn.getType())) {
-                pageBuilder.setString(expandedJsonColumn, finalValue);
+            if (Types.STRING.equals(expandedJsonColumn.getColumn().getType())) {
+                pageBuilder.setString(expandedJsonColumn.getColumn(), finalValue);
             }
-            else if (Types.BOOLEAN.equals(expandedJsonColumn.getType())) {
-                pageBuilder.setBoolean(expandedJsonColumn, Boolean.parseBoolean(finalValue));
+            else if (Types.BOOLEAN.equals(expandedJsonColumn.getColumn().getType())) {
+                pageBuilder.setBoolean(expandedJsonColumn.getColumn(), Boolean.parseBoolean(finalValue));
             }
-            else if (Types.DOUBLE.equals(expandedJsonColumn.getType())) {
-                pageBuilder.setDouble(expandedJsonColumn, Double.parseDouble(finalValue));
+            else if (Types.DOUBLE.equals(expandedJsonColumn.getColumn().getType())) {
+                pageBuilder.setDouble(expandedJsonColumn.getColumn(), Double.parseDouble(finalValue));
             }
-            else if (Types.LONG.equals(expandedJsonColumn.getType())) {
-                pageBuilder.setLong(expandedJsonColumn, Long.parseLong(finalValue));
+            else if (Types.LONG.equals(expandedJsonColumn.getColumn().getType())) {
+                pageBuilder.setLong(expandedJsonColumn.getColumn(), Long.parseLong(finalValue));
             }
-            else if (Types.TIMESTAMP.equals(expandedJsonColumn.getType())) {
-                TimestampParser parser = timestampParserMap.get(expandedJsonColumn.getName());
-                pageBuilder.setTimestamp(expandedJsonColumn, parser.parse(finalValue));
+            else if (Types.TIMESTAMP.equals(expandedJsonColumn.getColumn().getType())) {
+                if (expandedJsonColumn.getTimestampParser().isPresent()) {
+                    TimestampParser parser = expandedJsonColumn.getTimestampParser().get();
+                    pageBuilder.setTimestamp(expandedJsonColumn.getColumn(), parser.parse(finalValue));
+                }
+                else {
+                    throw new RuntimeException("TimestampParser is absent for column:" + expandedJsonColumn.getKey());
+                }
             }
         }
     }
