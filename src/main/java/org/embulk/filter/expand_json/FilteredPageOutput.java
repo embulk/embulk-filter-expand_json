@@ -34,6 +34,75 @@ import static org.embulk.filter.expand_json.ExpandJsonFilterPlugin.PluginTask;
 public class FilteredPageOutput
     implements PageOutput
 {
+    private class ExpandedColumn
+    {
+        private final String key;
+        private final Column column;
+        private final String jsonPath;
+        private final Optional<TimestampParser> timestampParser;
+
+        ExpandedColumn(String key,
+                       Column column,
+                       String jsonPath,
+                       Optional<TimestampParser> timestampParser)
+        {
+            this.key = key;
+            this.column = column;
+            this.jsonPath = jsonPath;
+            this.timestampParser = timestampParser;
+        }
+
+        public String getKey()
+        {
+            return key;
+        }
+
+        public Column getColumn()
+        {
+            return column;
+        }
+
+        public String getJsonPath()
+        {
+            return jsonPath;
+        }
+
+        public Optional<TimestampParser> getTimestampParser()
+        {
+            return timestampParser;
+        }
+    }
+
+    private class UnchangedColumn
+    {
+        private final String key;
+        private final Column inputColumn;
+        private final Column outputColumn;
+
+        UnchangedColumn(String key, Column inputColumn, Column outputColumn)
+        {
+            this.key = key;
+            this.inputColumn = inputColumn;
+            this.outputColumn = outputColumn;
+        }
+
+        public String getKey()
+        {
+            return key;
+        }
+
+        public Column getInputColumn()
+        {
+            return inputColumn;
+        }
+
+        public Column getOutputColumn()
+        {
+            return outputColumn;
+        }
+    }
+
+
     private final Logger logger = Exec.getLogger(FilteredPageOutput.class);
     private final String jsonPathRoot;
     private final List<Column> inputColumnsExceptExpandedJsonColumn;
