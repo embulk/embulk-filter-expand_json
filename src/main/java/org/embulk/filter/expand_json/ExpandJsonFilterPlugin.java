@@ -65,14 +65,16 @@ public class ExpandJsonFilterPlugin
         int i = 0; // columns index
         for (Column inputColumn: inputSchema.getColumns()) {
             if (inputColumn.getName().contentEquals(task.getJsonColumnName())) {
-                logger.info("removed column: name: {}, type: {}",
+                logger.info("removed column: name: {}, type: {}, index: {}",
                             inputColumn.getName(),
-                            inputColumn.getType());
+                            inputColumn.getType(),
+                            inputColumn.getIndex());
                 for (ColumnConfig expandedColumnConfig: task.getExpandedColumns()) {
-                    logger.info("added column: name: {}, type: {}, options: {}",
+                    logger.info("added column: name: {}, type: {}, options: {}, index: {}",
                                 expandedColumnConfig.getName(),
                                 expandedColumnConfig.getType(),
-                                expandedColumnConfig.getOption());
+                                expandedColumnConfig.getOption(),
+                                i);
                     Column outputColumn = new Column(i++,
                                                      expandedColumnConfig.getName(),
                                                      expandedColumnConfig.getType());
@@ -80,6 +82,10 @@ public class ExpandJsonFilterPlugin
                 }
             }
             else {
+                logger.info("unchanged column: name: {}, type: {}, index: {}",
+                            inputColumn.getName(),
+                            inputColumn.getType(),
+                            i);
                 Column outputColumn = new Column(i++,
                                                  inputColumn.getName(),
                                                  inputColumn.getType());
