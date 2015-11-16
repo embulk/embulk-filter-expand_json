@@ -2,12 +2,13 @@ package org.embulk.filter.expand_json;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.common.base.Optional;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Maps;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
+import com.jayway.jsonpath.ParseContext;
 import com.jayway.jsonpath.ReadContext;
 import org.embulk.spi.Column;
 import org.embulk.spi.ColumnConfig;
@@ -22,7 +23,6 @@ import org.embulk.spi.type.Types;
 import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
 
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
