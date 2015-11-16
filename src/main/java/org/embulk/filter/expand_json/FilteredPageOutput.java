@@ -43,6 +43,7 @@ public class FilteredPageOutput
     private final PageReader pageReader;
     private final Schema inputSchema;
     private final Schema outputSchema;
+    private final PageBuilder pageBuilder;
     private final PageOutput pageOutput;
 
     FilteredPageOutput(PluginTask task, Schema inputSchema, Schema outputSchema, PageOutput pageOutput)
@@ -75,12 +76,13 @@ public class FilteredPageOutput
         this.inputSchema = inputSchema;
         this.outputSchema = outputSchema;
         this.pageOutput = pageOutput;
+        this.pageBuilder = new PageBuilder(Exec.getBufferAllocator(), outputSchema, pageOutput);
     }
 
     @Override
     public void add(Page page)
     {
-        try (PageBuilder pageBuilder = new PageBuilder(Exec.getBufferAllocator(), outputSchema, pageOutput)) {
+        try {
             pageReader.setPage(page);
 
             while (pageReader.nextRecord()) {
@@ -88,7 +90,6 @@ public class FilteredPageOutput
                 setExpandedJsonColumns(pageBuilder, jsonColumn, expandedJsonColumns, timestampParserHashMap);
                 pageBuilder.addRecord();
             }
-            pageBuilder.finish();
         }
         catch (JsonProcessingException e) {
             logger.error(e.getMessage());
@@ -99,6 +100,7 @@ public class FilteredPageOutput
     @Override
     public void finish()
     {
+        pageBuilder.finish();
         pageOutput.finish();
     }
 
@@ -106,6 +108,7 @@ public class FilteredPageOutput
     public void close()
     {
         pageReader.close();
+        pageBuilder.close();
         pageOutput.close();
     }
 
