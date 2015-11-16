@@ -40,7 +40,9 @@ public class TestExpandJsonFilterPlugin
 
     private final Schema schema = Schema.builder()
             .add("_c0", STRING)
+            .add("_c1", STRING)
             .build();
+    private final String c1Data = "_c1_data";
     private ExpandJsonFilterPlugin expandJsonFilterPlugin;
 
     @Before
@@ -139,7 +141,8 @@ public class TestExpandJsonFilterPlugin
                 "  - {name: _j2, type: long}\n" +
                 "  - {name: _j3, type: timestamp}\n" +
                 "  - {name: _j4, type: double}\n" +
-                "  - {name: _j5, type: string}\n";
+                "  - {name: _j5, type: string}\n" +
+                "  - {name: _c0, type: string}\n";
 
         ConfigSource config = getConfigFromYaml(configYaml);
 
@@ -148,13 +151,15 @@ public class TestExpandJsonFilterPlugin
             @Override
             public void run(TaskSource taskSource, Schema outputSchema)
             {
-                assertEquals(5, outputSchema.getColumnCount());
+                assertEquals(7, outputSchema.getColumnCount());
 
                 Column new_j1 = outputSchema.getColumn(0);
                 Column new_j2 = outputSchema.getColumn(1);
                 Column new_j3 = outputSchema.getColumn(2);
                 Column new_j4 = outputSchema.getColumn(3);
                 Column new_j5 = outputSchema.getColumn(4);
+                Column new_c0 = outputSchema.getColumn(5);
+                Column old_c1 = outputSchema.getColumn(6);
 
                 assertEquals("_j1", new_j1.getName());
                 assertEquals(BOOLEAN, new_j1.getType());
@@ -166,6 +171,11 @@ public class TestExpandJsonFilterPlugin
                 assertEquals(DOUBLE, new_j4.getType());
                 assertEquals("_j5", new_j5.getName());
                 assertEquals(STRING, new_j5.getType());
+                assertEquals("_c0", new_c0.getName());
+                assertEquals(STRING, new_c0.getType());
+                assertEquals("_c1", old_c1.getName());
+                assertEquals(STRING, old_c1.getType());
+
             }
         });
     }
@@ -191,7 +201,8 @@ public class TestExpandJsonFilterPlugin
                 "  - {name: '_j7..book[?(@.price <= $[''_j7''][''expensive''])].author', type: string}\n" +
                 "  - {name: '_j7..book[?(@.isbn)]', type: string}\n" +
                 "  - {name: '_j7..book[?(@.author =~ /.*REES/i)].title', type: string}\n" +
-                "  - {name: '_j7.store.book[2].author', type: string}\n";
+                "  - {name: '_j7.store.book[2].author', type: string}\n" +
+                "  - {name: _c0, type: string}\n";
 
         ConfigSource config = getConfigFromYaml(configYaml);
 
@@ -292,12 +303,13 @@ public class TestExpandJsonFilterPlugin
                             }
                              */
                 );
+                builder.put("_c0", "v12");
 
                 String data = convertToJsonString(builder.build());
 
                 for (Page page : PageTestUtils.buildPage(runtime.getBufferAllocator(),
                                                          schema,
-                                                         data)) {
+                                                         data, c1Data)) {
                     pageOutput.add(page);
                 }
 
@@ -323,7 +335,8 @@ public class TestExpandJsonFilterPlugin
                                  pageReader.getString(outputSchema.getColumn(7)));
                     assertEquals("[\"Nigel Rees\",\"Herman Melville\"]",
                                  pageReader.getString(outputSchema.getColumn(8)));
-                    assertEquals("[" +
+                    assertEquals("" +
+                                         "[" +
                                          "{" +
                                          "\"author\":\"Herman Melville\"," +
                                          "\"title\":\"Moby Dick\"," +
@@ -342,6 +355,10 @@ public class TestExpandJsonFilterPlugin
                                  pageReader.getString(outputSchema.getColumn(10)));
                     assertEquals("Herman Melville",
                                  pageReader.getString(outputSchema.getColumn(11)));
+                    assertEquals("v12",
+                                 pageReader.getString(outputSchema.getColumn(12)));
+                    assertEquals(c1Data,
+                                 pageReader.getString(outputSchema.getColumn(13)));
                 }
             }
         });
@@ -373,7 +390,7 @@ public class TestExpandJsonFilterPlugin
                 String data = getBrokenJsonString();
                 for (Page page : PageTestUtils.buildPage(runtime.getBufferAllocator(),
                                                          schema,
-                                                         data)) {
+                                                         data, c1Data)) {
                     exception.expect(InvalidJsonException.class);
                     exception.expectMessage("Unexpected End Of File position 12: null");
                     pageOutput.add(page);
@@ -391,5 +408,4 @@ public class TestExpandJsonFilterPlugin
             }
         });
     }
-
 }
