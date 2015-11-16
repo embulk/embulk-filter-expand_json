@@ -108,10 +108,9 @@ public class FilteredPageOutput
     private final List<ExpandedColumn> expandedColumns;
     private final Column jsonColumn;
     private final PageReader pageReader;
-    private final Schema inputSchema;
-    private final Schema outputSchema;
     private final PageBuilder pageBuilder;
-    private final PageOutput pageOutput;
+    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ParseContext parseContext;
 
     private List<ExpandedColumn> initializeExpandedColumns(PluginTask task,
                                                            Schema outputSchema)
@@ -191,12 +190,9 @@ public class FilteredPageOutput
         this.expandedColumns = initializeExpandedColumns(task,
                                                          outputSchema);
 
-        this.timestampParserHashMap = buildTimestampParserHashMap(task);
         this.pageReader = new PageReader(inputSchema);
-        this.inputSchema = inputSchema;
-        this.outputSchema = outputSchema;
-        this.pageOutput = pageOutput;
         this.pageBuilder = new PageBuilder(Exec.getBufferAllocator(), outputSchema, pageOutput);
+        this.parseContext = initializeParseContext();
     }
 
     @Override
@@ -221,7 +217,6 @@ public class FilteredPageOutput
     public void finish()
     {
         pageBuilder.finish();
-        pageOutput.finish();
     }
 
     @Override
@@ -229,7 +224,6 @@ public class FilteredPageOutput
     {
         pageReader.close();
         pageBuilder.close();
-        pageOutput.close();
     }
 
     
@@ -269,11 +263,8 @@ public class FilteredPageOutput
             json = null;
         }
         else {
-            String jsonObject = pageReader.getString(originalJsonColumn);
-            Configuration conf = Configuration.defaultConfiguration();
-            conf = conf.addOptions(Option.DEFAULT_PATH_LEAF_TO_NULL);
-            conf = conf.addOptions(Option.SUPPRESS_EXCEPTIONS);
-            json = JsonPath.using(conf).parse(jsonObject);
+            String jsonObject = pageReader.getString(jsonColumn);
+            json = parseContext.parse(jsonObject);
         }
 
         for (ExpandedColumn expandedJsonColumn: expandedColumns) {
@@ -313,17 +304,17 @@ public class FilteredPageOutput
         }
     }
 
-    private String writeJsonPathValueAsString(Object value)
+    private String convertJsonNodeAsString(Object value)
             throws JsonProcessingException
     {
         if (value == null) {
             return null;
         }
         else if (value instanceof List) {
-            return new ObjectMapper().writeValueAsString(value);
+            return objectMapper.writeValueAsString(value);
         }
         else if (value instanceof Map) {
-            return new ObjectMapper().writeValueAsString(value);
+            return objectMapper.writeValueAsString(value);
         }
         else if (value instanceof String) {
             return (String) value;
@@ -332,5 +323,4 @@ public class FilteredPageOutput
             return String.valueOf(value);
         }
     }
-    
 }
