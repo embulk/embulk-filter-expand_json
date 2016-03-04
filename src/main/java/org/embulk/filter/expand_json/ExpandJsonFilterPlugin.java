@@ -3,6 +3,7 @@ package org.embulk.filter.expand_json;
 import com.google.common.collect.ImmutableList;
 import org.embulk.config.Config;
 import org.embulk.config.ConfigDefault;
+import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
 import org.embulk.config.Task;
 import org.embulk.config.TaskSource;
@@ -13,6 +14,7 @@ import org.embulk.spi.FilterPlugin;
 import org.embulk.spi.PageOutput;
 import org.embulk.spi.Schema;
 import org.embulk.spi.time.TimestampParser;
+import org.embulk.spi.type.Types;
 import org.slf4j.Logger;
 
 import java.util.List;
@@ -47,8 +49,13 @@ public class ExpandJsonFilterPlugin
     {
         PluginTask task = config.loadConfig(PluginTask.class);
 
-        // check if the specified json column exists or not
-        inputSchema.lookupColumn(task.getJsonColumnName());
+        // check if a column specified as json_column_name option exists or not
+        Column jsonColumn = inputSchema.lookupColumn(task.getJsonColumnName());
+        if (jsonColumn.getType() != Types.STRING) {
+            // throws ConfigException if the column is not string type.
+            throw new ConfigException(String.format("A column specified as json_column_name option must be string type: %s",
+                    new Object[] {jsonColumn.toString()}));
+        }
 
         Schema outputSchema = buildOutputSchema(task, inputSchema);
         control.run(task.dump(), outputSchema);
