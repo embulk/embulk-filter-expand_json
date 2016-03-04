@@ -18,6 +18,7 @@ import org.embulk.spi.PageOutput;
 import org.embulk.spi.PageReader;
 import org.embulk.spi.PageTestUtils;
 import org.embulk.spi.Schema;
+import org.embulk.spi.SchemaConfigException;
 import org.embulk.spi.TestPageBuilderReader.MockPageOutput;
 import org.junit.Before;
 import org.junit.Rule;
@@ -89,6 +90,26 @@ public class TestExpandJsonFilterPlugin
         exception.expect(ConfigException.class);
         exception.expectMessage("Field 'json_column_name' is required but not set");
         config.loadConfig(PluginTask.class);
+    }
+
+    @Test
+    public void testThrowExceptionInvalidJsonColumnName()
+    {
+        String configYaml = "" +
+                "type: expand_json\n" +
+                "json_column_name: not_exist\n" +
+                "expanded_columns:\n" +
+                "  - {name: _c1, type: string}";
+        ConfigSource config = getConfigFromYaml(configYaml);
+
+        exception.expect(SchemaConfigException.class);
+        expandJsonFilterPlugin.transaction(config, schema, new Control() {
+            @Override
+            public void run(TaskSource taskSource, Schema schema)
+            {
+                // do nothing
+            }
+        });
     }
 
     @Test

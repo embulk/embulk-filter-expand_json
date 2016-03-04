@@ -46,6 +46,10 @@ public class ExpandJsonFilterPlugin
             FilterPlugin.Control control)
     {
         PluginTask task = config.loadConfig(PluginTask.class);
+
+        // check if the specified json column exists or not
+        inputSchema.lookupColumn(task.getJsonColumnName());
+
         Schema outputSchema = buildOutputSchema(task, inputSchema);
         control.run(task.dump(), outputSchema);
     }
