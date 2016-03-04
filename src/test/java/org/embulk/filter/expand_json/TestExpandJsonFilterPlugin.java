@@ -20,6 +20,7 @@ import org.embulk.spi.PageTestUtils;
 import org.embulk.spi.Schema;
 import org.embulk.spi.SchemaConfigException;
 import org.embulk.spi.TestPageBuilderReader.MockPageOutput;
+import org.embulk.spi.type.Type;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -39,16 +40,14 @@ public class TestExpandJsonFilterPlugin
     public ExpectedException exception = ExpectedException.none();
 
 
-    private final Schema schema = Schema.builder()
-            .add("_c0", STRING)
-            .add("_c1", STRING)
-            .build();
     private final String c1Data = "_c1_data";
+    private Schema schema;
     private ExpandJsonFilterPlugin expandJsonFilterPlugin;
 
     @Before
     public void createResources()
     {
+        schema = schema("_c0", STRING, "_c1", STRING);
         expandJsonFilterPlugin = new ExpandJsonFilterPlugin();
     }
 
@@ -103,6 +102,27 @@ public class TestExpandJsonFilterPlugin
         ConfigSource config = getConfigFromYaml(configYaml);
 
         exception.expect(SchemaConfigException.class);
+        expandJsonFilterPlugin.transaction(config, schema, new Control() {
+            @Override
+            public void run(TaskSource taskSource, Schema schema)
+            {
+                // do nothing
+            }
+        });
+    }
+
+    @Test
+    public void testThrowExceptionInvalidJsonColumnType()
+    {
+        String configYaml = "" +
+                "type: expand_json\n" +
+                "json_column_name: _c2\n" +
+                "expanded_columns:\n" +
+                "  - {name: _c1, type: string}";
+        ConfigSource config = getConfigFromYaml(configYaml);
+        schema = schema("_c0", STRING, "_c1", STRING, "_c2", LONG);
+
+        exception.expect(ConfigException.class);
         expandJsonFilterPlugin.transaction(config, schema, new Control() {
             @Override
             public void run(TaskSource taskSource, Schema schema)
@@ -428,5 +448,14 @@ public class TestExpandJsonFilterPlugin
                 }
             }
         });
+    }
+
+    private static Schema schema(Object... nameAndTypes)
+    {
+        Schema.Builder builder = Schema.builder();
+        for (int i = 0; i < nameAndTypes.length; i += 2) {
+            builder.add((String) nameAndTypes[i], (Type) nameAndTypes[i + 1]);
+        }
+        return builder.build();
     }
 }
