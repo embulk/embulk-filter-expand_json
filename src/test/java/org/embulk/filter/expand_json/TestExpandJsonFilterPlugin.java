@@ -41,13 +41,15 @@ public class TestExpandJsonFilterPlugin
 
 
     private final String c1Data = "_c1_data";
+    // schema object is recreated per test method. Since each test method might require different schema,
+    // it's better that this field can be overwritten by each method.
     private Schema schema;
     private ExpandJsonFilterPlugin expandJsonFilterPlugin;
 
     @Before
     public void createResources()
     {
-        schema = schema("_c0", STRING, "_c1", STRING);
+        schema = schema("_c0", STRING, "_c1", STRING); // default schema
         expandJsonFilterPlugin = new ExpandJsonFilterPlugin();
     }
 
