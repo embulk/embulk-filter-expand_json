@@ -51,9 +51,9 @@ public class ExpandJsonFilterPlugin
 
         // check if a column specified as json_column_name option exists or not
         Column jsonColumn = inputSchema.lookupColumn(task.getJsonColumnName());
-        if (jsonColumn.getType() != Types.STRING) {
-            // throws ConfigException if the column is not string type.
-            throw new ConfigException(String.format("A column specified as json_column_name option must be string type: %s",
+        if (jsonColumn.getType() != Types.STRING && jsonColumn.getType() != Types.JSON) {
+            // throws ConfigException if the column is not string or json type.
+            throw new ConfigException(String.format("A column specified as json_column_name option must be string or json type: %s",
                     new Object[] {jsonColumn.toString()}));
         }
 

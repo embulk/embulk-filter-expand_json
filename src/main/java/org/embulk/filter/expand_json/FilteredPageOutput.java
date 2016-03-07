@@ -18,6 +18,7 @@ import org.embulk.spi.PageBuilder;
 import org.embulk.spi.PageOutput;
 import org.embulk.spi.PageReader;
 import org.embulk.spi.Schema;
+import org.embulk.spi.json.JsonParser;
 import org.embulk.spi.time.TimestampParser;
 import org.embulk.spi.type.Types;
 import org.joda.time.DateTimeZone;
@@ -111,6 +112,7 @@ public class FilteredPageOutput
     private final PageBuilder pageBuilder;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final ParseContext parseContext;
+    private final JsonParser jsonParser = new JsonParser();
 
     private List<ExpandedColumn> initializeExpandedColumns(PluginTask task,
                                                            Schema outputSchema)
@@ -264,7 +266,12 @@ public class FilteredPageOutput
         if (pageReader.isNull(jsonColumn)) {
             json = null;
         }
-        else {
+        else if (jsonColumn.getType() == Types.JSON) {
+            // TODO could use Value object directly and optimize this code
+            String jsonObject = pageReader.getJson(jsonColumn).toJson();
+            json = parseContext.parse(jsonObject);
+        }
+        else { // Types.STRING
             String jsonObject = pageReader.getString(jsonColumn);
             json = parseContext.parse(jsonObject);
         }
@@ -302,6 +309,9 @@ public class FilteredPageOutput
                 else {
                     throw new RuntimeException("TimestampParser is absent for column:" + expandedJsonColumn.getKey());
                 }
+            }
+            else if (Types.JSON.equals(expandedJsonColumn.getColumn().getType())) {
+                pageBuilder.setJson(expandedJsonColumn.getColumn(), jsonParser.parse(finalValue));
             }
         }
     }

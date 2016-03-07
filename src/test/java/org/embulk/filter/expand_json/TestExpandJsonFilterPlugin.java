@@ -25,11 +25,19 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.msgpack.value.Value;
 
 import static org.embulk.filter.expand_json.ExpandJsonFilterPlugin.Control;
 import static org.embulk.filter.expand_json.ExpandJsonFilterPlugin.PluginTask;
 import static org.embulk.spi.type.Types.*;
 import static org.junit.Assert.assertEquals;
+import static org.msgpack.value.ValueFactory.newArray;
+import static org.msgpack.value.ValueFactory.newBoolean;
+import static org.msgpack.value.ValueFactory.newFloat;
+import static org.msgpack.value.ValueFactory.newInteger;
+import static org.msgpack.value.ValueFactory.newMap;
+import static org.msgpack.value.ValueFactory.newMapBuilder;
+import static org.msgpack.value.ValueFactory.newString;
 
 public class TestExpandJsonFilterPlugin
 {
@@ -158,7 +166,8 @@ public class TestExpandJsonFilterPlugin
                 "  - {name: _j2, type: long}\n" +
                 "  - {name: _j3, type: timestamp}\n" +
                 "  - {name: _j4, type: double}\n" +
-                "  - {name: _j5, type: string}\n";
+                "  - {name: _j5, type: string}\n" +
+                "  - {name: _j6, type: json}\n";
 
         ConfigSource config = getConfigFromYaml(configYaml);
         PluginTask task = config.loadConfig(PluginTask.class);
@@ -185,6 +194,7 @@ public class TestExpandJsonFilterPlugin
                 "  - {name: _j3, type: timestamp}\n" +
                 "  - {name: _j4, type: double}\n" +
                 "  - {name: _j5, type: string}\n" +
+                "  - {name: _j6, type: json}\n" +
                 "  - {name: _c0, type: string}\n";
 
         ConfigSource config = getConfigFromYaml(configYaml);
@@ -194,15 +204,16 @@ public class TestExpandJsonFilterPlugin
             @Override
             public void run(TaskSource taskSource, Schema outputSchema)
             {
-                assertEquals(7, outputSchema.getColumnCount());
+                assertEquals(8, outputSchema.getColumnCount());
 
                 Column new_j1 = outputSchema.getColumn(0);
                 Column new_j2 = outputSchema.getColumn(1);
                 Column new_j3 = outputSchema.getColumn(2);
                 Column new_j4 = outputSchema.getColumn(3);
                 Column new_j5 = outputSchema.getColumn(4);
-                Column new_c0 = outputSchema.getColumn(5);
-                Column old_c1 = outputSchema.getColumn(6);
+                Column new_j6 = outputSchema.getColumn(5);
+                Column new_c0 = outputSchema.getColumn(6);
+                Column old_c1 = outputSchema.getColumn(7);
 
                 assertEquals("_j1", new_j1.getName());
                 assertEquals(BOOLEAN, new_j1.getType());
@@ -214,17 +225,131 @@ public class TestExpandJsonFilterPlugin
                 assertEquals(DOUBLE, new_j4.getType());
                 assertEquals("_j5", new_j5.getName());
                 assertEquals(STRING, new_j5.getType());
+                assertEquals("_j6", new_j6.getName());
+                assertEquals(JSON, new_j6.getType());
                 assertEquals("_c0", new_c0.getName());
                 assertEquals(STRING, new_c0.getType());
                 assertEquals("_c1", old_c1.getName());
                 assertEquals(STRING, old_c1.getType());
-
             }
         });
     }
 
     @Test
-    public void testExpandJsonValues()
+    public void testExpandJsonValuesFromJson()
+    {
+        String configYaml = "" +
+                "type: expand_json\n" +
+                "json_column_name: _c0\n" +
+                "root: $.\n" +
+                "time_zone: Asia/Tokyo\n" +
+                "expanded_columns:\n" +
+                "  - {name: _j0, type: boolean}\n" +
+                "  - {name: _j1, type: long}\n" +
+                "  - {name: _j2, type: timestamp, format: '%Y-%m-%d %H:%M:%S %z'}\n" +
+                "  - {name: _j3, type: double}\n" +
+                "  - {name: _j4, type: string}\n" +
+                "  - {name: _j5, type: timestamp, format: '%Y-%m-%d %H:%M:%S %z'}\n" +
+                "  - {name: _j6, type: timestamp, format: '%Y-%m-%d %H:%M:%S'}\n" +
+                // JsonPath: https://github.com/jayway/JsonPath
+                "  - {name: '_j7.store.book[*].author', type: string}\n" +
+                "  - {name: '_j7..book[?(@.price <= $[''_j7''][''expensive''])].author', type: string}\n" +
+                "  - {name: '_j7..book[?(@.isbn)]', type: string}\n" +
+                "  - {name: '_j7..book[?(@.author =~ /.*REES/i)].title', type: string}\n" +
+                "  - {name: '_j7.store.book[2].author', type: string}\n" +
+                "  - {name: _c0, type: string}\n";
+
+        ConfigSource config = getConfigFromYaml(configYaml);
+        final Schema schema = schema("_c0", JSON, "_c1", STRING);
+
+        expandJsonFilterPlugin.transaction(config, schema, new Control()
+        {
+            @Override
+            public void run(TaskSource taskSource, Schema outputSchema)
+            {
+                MockPageOutput mockPageOutput = new MockPageOutput();
+                Value data = newMapBuilder()
+                        .put(s("_j0"), b(true))
+                        .put(s("_j1"), i(2))
+                        .put(s("_j2"), s("2014-10-21 04:44:33 +0900"))
+                        .put(s("_j3"), f(4.4))
+                        .put(s("_j4"), s("v5"))
+                        .put(s("_j5"), s("2014-10-21 04:44:33 +0000"))
+                        .put(s("_j6"), s("2014-10-21 04:44:33"))
+                        .put(s("_j7"), newMapBuilder()
+                                .put(s("store"), newMapBuilder()
+                                        .put(s("book"), newArray(
+                                                newMap(s("author"), s("Nigel Rees"), s("title"), s("Sayings of the Century"), s("price"), f(8.95)),
+                                                newMap(s("author"), s("Evelyn Waugh"), s("title"), s("Sword of Honour"), s("price"), f(12.99)),
+                                                newMap(s("author"), s("Herman Melville"), s("title"), s("Moby Dick"), s("isbn"), s("0-553-21311-3"), s("price"), f(8.99)),
+                                                newMap(s("author"), s("J. R. R. Tolkien"), s("title"), s("The Lord of the Rings"), s("isbn"), s("0-395-19395-8"), s("price"), f(22.99))
+                                        ))
+                                        .put(s("bicycle"), newMap(s("color"), s("red"), s("price"), f(19.95)))
+                                        .build())
+                                .put(s("expensive"), i(10))
+                                .build())
+                        .put(s("_c0"), s("v12"))
+                        .build();
+
+                try (PageOutput pageOutput = expandJsonFilterPlugin.open(taskSource, schema, outputSchema, mockPageOutput)) {
+                    for (Page page : PageTestUtils.buildPage(runtime.getBufferAllocator(), schema, data, c1Data)) {
+                        pageOutput.add(page);
+                    }
+
+                    pageOutput.finish();
+                }
+
+                PageReader pageReader = new PageReader(outputSchema);
+
+                for (Page page : mockPageOutput.pages) {
+                    pageReader.setPage(page);
+                    assertEquals(true, pageReader.getBoolean(outputSchema.getColumn(0)));
+                    assertEquals(2, pageReader.getLong(outputSchema.getColumn(1)));
+                    assertEquals("2014-10-20 19:44:33 UTC", pageReader.getTimestamp(outputSchema.getColumn(2)).toString());
+                    assertEquals(String.valueOf(4.4), String.valueOf(pageReader.getDouble(outputSchema.getColumn(3))));
+                    assertEquals("v5", pageReader.getString(outputSchema.getColumn(4)));
+                    assertEquals("2014-10-21 04:44:33 UTC", pageReader.getTimestamp(outputSchema.getColumn(5)).toString());
+                    assertEquals("2014-10-20 19:44:33 UTC", pageReader.getTimestamp(outputSchema.getColumn(6)).toString());
+                    assertEquals("[\"Nigel Rees\",\"Evelyn Waugh\",\"Herman Melville\",\"J. R. R. Tolkien\"]",
+                            pageReader.getString(outputSchema.getColumn(7)));
+                    assertEquals("[\"Nigel Rees\",\"Herman Melville\"]", pageReader.getString(outputSchema.getColumn(8)));
+                    assertEquals("" +
+                                    "[" +
+                                    "{\"author\":\"Herman Melville\",\"title\":\"Moby Dick\",\"isbn\":\"0-553-21311-3\",\"price\":8.99}," +
+                                    "{\"author\":\"J. R. R. Tolkien\",\"title\":\"The Lord of the Rings\",\"isbn\":\"0-395-19395-8\",\"price\":22.99}" +
+                                    "]",
+                            pageReader.getString(outputSchema.getColumn(9)));
+                    assertEquals("[\"Sayings of the Century\"]", pageReader.getString(outputSchema.getColumn(10)));
+                    assertEquals("Herman Melville", pageReader.getString(outputSchema.getColumn(11)));
+                    assertEquals("v12", pageReader.getString(outputSchema.getColumn(12)));
+                    assertEquals(c1Data, pageReader.getString(outputSchema.getColumn(13)));
+                }
+            }
+        });
+    }
+
+    private static Value s(String value)
+    {
+        return newString(value);
+    }
+
+    private static Value i(int value)
+    {
+        return newInteger(value);
+    }
+
+    private static Value f(double value)
+    {
+        return newFloat(value);
+    }
+
+    private static Value b(boolean value)
+    {
+        return newBoolean(value);
+    }
+
+    @Test
+    public void testExpandJsonValuesFromString()
     {
         String configYaml = "" +
                 "type: expand_json\n" +
