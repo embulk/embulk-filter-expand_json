@@ -3,6 +3,7 @@ package org.embulk.filter.expand_json;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
+import com.google.common.base.Strings;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.jayway.jsonpath.Configuration;
@@ -266,14 +267,16 @@ public class FilteredPageOutput
         if (pageReader.isNull(jsonColumn)) {
             json = null;
         }
-        else if (jsonColumn.getType() == Types.JSON) {
-            // TODO could use Value object directly and optimize this code
-            String jsonObject = pageReader.getJson(jsonColumn).toJson();
-            json = parseContext.parse(jsonObject);
-        }
-        else { // Types.STRING
-            String jsonObject = pageReader.getString(jsonColumn);
-            json = parseContext.parse(jsonObject);
+        else {
+            String jsonObject;
+            if (jsonColumn.getType().equals(Types.JSON)) {
+                jsonObject = pageReader.getJson(jsonColumn).toJson(); // TODO could use Value object directly and optimize this code
+            }
+            else {
+                jsonObject = pageReader.getString(jsonColumn);
+            }
+
+            json = Strings.isNullOrEmpty(jsonObject) ? null : parseContext.parse(jsonObject);
         }
 
         for (ExpandedColumn expandedJsonColumn: expandedColumns) {
