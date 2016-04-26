@@ -21,16 +21,20 @@ import org.embulk.spi.Schema;
 import org.embulk.spi.SchemaConfigException;
 import org.embulk.spi.TestPageBuilderReader.MockPageOutput;
 import org.embulk.spi.type.Type;
+import org.embulk.spi.util.Pages;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
 import org.msgpack.value.Value;
+import org.msgpack.value.ValueFactory;
 
 import static org.embulk.filter.expand_json.ExpandJsonFilterPlugin.Control;
 import static org.embulk.filter.expand_json.ExpandJsonFilterPlugin.PluginTask;
 import static org.embulk.spi.type.Types.*;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.assertTrue;
 import static org.msgpack.value.ValueFactory.newArray;
 import static org.msgpack.value.ValueFactory.newBoolean;
 import static org.msgpack.value.ValueFactory.newFloat;
@@ -323,6 +327,45 @@ public class TestExpandJsonFilterPlugin
                     assertEquals("Herman Melville", pageReader.getString(outputSchema.getColumn(11)));
                     assertEquals("v12", pageReader.getString(outputSchema.getColumn(12)));
                     assertEquals(c1Data, pageReader.getString(outputSchema.getColumn(13)));
+                }
+            }
+        });
+    }
+
+    @Test
+    public void testExpandSpecialJsonValuesFromString()
+    {
+        final String configYaml = "" +
+                "type: expand_json\n" +
+                "json_column_name: _c1\n" +
+                "root: $.\n" +
+                "expanded_columns:\n" +
+                "  - {name: _e0, type: string}\n" +
+                "  - {name: _e1, type: string}\n"; // the value will be null
+
+        ConfigSource config = getConfigFromYaml(configYaml);
+        final Schema schema = schema("_c0", STRING, "_c1", STRING);
+
+        expandJsonFilterPlugin.transaction(config, schema, new Control()
+        {
+            @Override
+            public void run(TaskSource taskSource, Schema outputSchema)
+            {
+                MockPageOutput mockPageOutput = new MockPageOutput();
+
+                try (PageOutput pageOutput = expandJsonFilterPlugin.open(taskSource, schema, outputSchema, mockPageOutput)) {
+                    for (Page page : PageTestUtils.buildPage(runtime.getBufferAllocator(), schema,
+                            "_v0", "")) {
+                        pageOutput.add(page);
+                    }
+
+                    pageOutput.finish();
+                }
+
+                for (Object[] record : Pages.toObjects(outputSchema, mockPageOutput.pages)) {
+                    assertEquals("_v0", record[0]);
+                    assertNull(record[1]);
+                    assertNull(record[2]);
                 }
             }
         });
