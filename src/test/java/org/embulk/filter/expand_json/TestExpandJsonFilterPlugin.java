@@ -12,6 +12,7 @@ import org.embulk.config.ConfigLoader;
 import org.embulk.config.ConfigSource;
 import org.embulk.config.TaskSource;
 import org.embulk.spi.Column;
+import org.embulk.spi.DataException;
 import org.embulk.spi.Exec;
 import org.embulk.spi.Page;
 import org.embulk.spi.PageOutput;
@@ -26,8 +27,10 @@ import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.ExpectedException;
+import org.msgpack.value.MapValue;
 import org.msgpack.value.Value;
-import org.msgpack.value.ValueFactory;
+
+import java.util.List;
 
 import static org.embulk.filter.expand_json.ExpandJsonFilterPlugin.Control;
 import static org.embulk.filter.expand_json.ExpandJsonFilterPlugin.PluginTask;
@@ -35,6 +38,7 @@ import static org.embulk.spi.type.Types.*;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.msgpack.value.ValueFactory.newArray;
 import static org.msgpack.value.ValueFactory.newBoolean;
 import static org.msgpack.value.ValueFactory.newFloat;
@@ -184,6 +188,73 @@ public class TestExpandJsonFilterPlugin
     /*
     Expand Test
      */
+
+    @Test
+    public void testStopOnInvalidRecordOption()
+    {
+        String configYaml = "" +
+                "type: expand_json\n" +
+                "json_column_name: _c0\n" +
+                "root: $.\n" +
+                "expanded_columns:\n" +
+                "  - {name: _e0, type: json}\n";
+        final ConfigSource conf = getConfigFromYaml(configYaml);
+        final Schema schema = schema("_c0", STRING);
+
+        { // stop_on_invalid_record: false
+            ConfigSource config = conf.deepCopy();
+
+            expandJsonFilterPlugin.transaction(config, schema, new Control()
+            {
+                @Override
+                public void run(TaskSource taskSource, Schema outputSchema)
+                {
+                    MockPageOutput mockPageOutput = new MockPageOutput();
+
+                    try (PageOutput pageOutput = expandJsonFilterPlugin.open(taskSource, schema, outputSchema, mockPageOutput)) {
+                        for (Page page : PageTestUtils.buildPage(runtime.getBufferAllocator(), schema,
+                                "{\"_e0\":\"\"}", "{\"_e0\":{}}")) {
+                            pageOutput.add(page);
+                        }
+
+                        pageOutput.finish();
+                    }
+
+                    List<Object[]> records = Pages.toObjects(outputSchema, mockPageOutput.pages);
+                    assertEquals(1, records.size());
+                    assertEquals(0, ((MapValue) records.get(0)[0]).size()); // {}
+                }
+            });
+        }
+
+        { // stop_on_invalid_record: true
+            ConfigSource config = conf.deepCopy().set("stop_on_invalid_record", true);
+
+            try {
+                expandJsonFilterPlugin.transaction(config, schema, new Control()
+                {
+                    @Override
+                    public void run(TaskSource taskSource, Schema outputSchema)
+                    {
+                        MockPageOutput mockPageOutput = new MockPageOutput();
+
+                        try (PageOutput pageOutput = expandJsonFilterPlugin.open(taskSource, schema, outputSchema, mockPageOutput)) {
+                            for (Page page : PageTestUtils.buildPage(runtime.getBufferAllocator(), schema,
+                                    "{\"_e0\":\"\"}", "{\"_e0\":{}}")) {
+                                pageOutput.add(page);
+                            }
+
+                            pageOutput.finish();
+                        }
+                    }
+                });
+                fail();
+            }
+            catch (Throwable t) {
+                assertTrue(t instanceof DataException);
+            }
+        }
+    }
 
     @Test
     public void testExpandJsonKeyToSchema()
