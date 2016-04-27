@@ -1,3 +1,9 @@
+0.1.0 (2016-04-27)
+==================
+- [Incompatible Change]: Add stop_on_invalid_record option
+  - https://github.com/civitaspo/embulk-filter-expand_json/pull/15
+  - https://github.com/civitaspo/embulk-filter-expand_json/issues/14
+
 0.0.6 (2016-03-17)
 ==================
 - [Add] Support JSON type
