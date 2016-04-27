@@ -41,6 +41,10 @@ public class ExpandJsonFilterPlugin
         @Config("time_zone")
         @ConfigDefault("\"UTC\"")
         public String getTimeZone();
+
+        @Config("stop_on_invalid_record")
+        @ConfigDefault("false")
+        boolean getStopOnInvalidRecord();
     }
 
     @Override

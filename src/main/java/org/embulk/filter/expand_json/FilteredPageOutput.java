@@ -13,6 +13,7 @@ import com.jayway.jsonpath.ParseContext;
 import com.jayway.jsonpath.ReadContext;
 import org.embulk.spi.Column;
 import org.embulk.spi.ColumnConfig;
+import org.embulk.spi.DataException;
 import org.embulk.spi.Exec;
 import org.embulk.spi.Page;
 import org.embulk.spi.PageBuilder;
@@ -106,6 +107,7 @@ public class FilteredPageOutput
 
 
     private final Logger logger = Exec.getLogger(FilteredPageOutput.class);
+    private final boolean stopOnInvalidRecord;
     private final List<UnchangedColumn> unchangedColumns;
     private final List<ExpandedColumn> expandedColumns;
     private final Column jsonColumn;
@@ -188,6 +190,7 @@ public class FilteredPageOutput
 
     FilteredPageOutput(PluginTask task, Schema inputSchema, Schema outputSchema, PageOutput pageOutput)
     {
+        this.stopOnInvalidRecord = task.getStopOnInvalidRecord();
         this.jsonColumn = initializeJsonColumn(task, inputSchema);
         this.unchangedColumns = initializeUnchangedColumns(inputSchema,
                                                            outputSchema,
@@ -203,18 +206,19 @@ public class FilteredPageOutput
     @Override
     public void add(Page page)
     {
-        try {
-            pageReader.setPage(page);
-
-            while (pageReader.nextRecord()) {
+        pageReader.setPage(page);
+        while (pageReader.nextRecord()) {
+            try {
                 setExpandedJsonColumns();
                 setUnchangedColumns();
                 pageBuilder.addRecord();
             }
-        }
-        catch (JsonProcessingException e) {
-            logger.error(e.getMessage());
-            throw Throwables.propagate(e);
+            catch (DataException | JsonProcessingException e) {
+                if (stopOnInvalidRecord) {
+                    throw new DataException(String.format("Found an invalid record"), e);
+                }
+                logger.warn(String.format("Skipped an invalid record (%s)", e.getMessage()));
+            }
         }
     }
 
