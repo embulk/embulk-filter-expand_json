@@ -261,6 +261,9 @@ public class FilteredPageOutput
             else if (Types.TIMESTAMP.equals(outputColumn.getType())) {
                 pageBuilder.setTimestamp(outputColumn, pageReader.getTimestamp(inputColumn));
             }
+            else { // Json type
+                pageBuilder.setJson(outputColumn, pageReader.getJson(inputColumn));
+            }
         }
     }
 
