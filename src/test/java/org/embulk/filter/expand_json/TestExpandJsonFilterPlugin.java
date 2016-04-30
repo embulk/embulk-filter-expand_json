@@ -21,6 +21,7 @@ import org.embulk.spi.PageTestUtils;
 import org.embulk.spi.Schema;
 import org.embulk.spi.SchemaConfigException;
 import org.embulk.spi.TestPageBuilderReader.MockPageOutput;
+import org.embulk.spi.time.Timestamp;
 import org.embulk.spi.type.Type;
 import org.embulk.spi.util.Pages;
 import org.junit.Before;
@@ -188,6 +189,55 @@ public class TestExpandJsonFilterPlugin
     /*
     Expand Test
      */
+
+    @Test
+    public void testUnchangedColumnValues()
+    {
+        String configYaml = "" +
+                "type: expand_json\n" +
+                "json_column_name: _c6\n" +
+                "root: $.\n" +
+                "expanded_columns:\n" +
+                "  - {name: _e0, type: string}\n";
+        final ConfigSource config = getConfigFromYaml(configYaml);
+        final Schema schema = schema("_c0", STRING, "_c1", BOOLEAN, "_c2", DOUBLE,
+                "_c3", LONG, "_c4", TIMESTAMP, "_c5", JSON, "_c6", STRING);
+
+        expandJsonFilterPlugin.transaction(config, schema, new Control()
+        {
+            @Override
+            public void run(TaskSource taskSource, Schema outputSchema)
+            {
+                MockPageOutput mockPageOutput = new MockPageOutput();
+
+                try (PageOutput pageOutput = expandJsonFilterPlugin.open(taskSource, schema, outputSchema, mockPageOutput)) {
+                    for (Page page : PageTestUtils.buildPage(runtime.getBufferAllocator(), schema,
+                            "_v0", // _c0
+                            true,  // _c1
+                            0.2, // _c2
+                            3L,   // _c3
+                            Timestamp.ofEpochSecond(4), // _c4
+                            newMapBuilder().put(s("_e0"), s("_v5")).build(), // _c5
+                            "{\"_e0\":\"_v6\"}")) {
+                        pageOutput.add(page);
+                    }
+
+                    pageOutput.finish();
+                }
+
+                List<Object[]> records = Pages.toObjects(outputSchema, mockPageOutput.pages);
+                assertEquals(1, records.size());
+
+                Object[] record = records.get(0);
+                assertEquals("_v0", record[0]);
+                assertEquals(true, record[1]);
+                assertEquals(0.2, (double) record[2], 0.0001);
+                assertEquals(3L, record[3]);
+                assertEquals(Timestamp.ofEpochSecond(4), record[4]);
+                assertEquals(newMapBuilder().put(s("_e0"), s("_v5")).build(), record[5]);
+            }
+        });
+    }
 
     @Test
     public void testStopOnInvalidRecordOption()
