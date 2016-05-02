@@ -45,6 +45,10 @@ public class ExpandJsonFilterPlugin
         @Config("stop_on_invalid_record")
         @ConfigDefault("false")
         boolean getStopOnInvalidRecord();
+
+        @Config("keep_expanding_json_column")
+        @ConfigDefault("false")
+        public boolean getKeepExpandingJsonColumn();
     }
 
     @Override
@@ -80,10 +84,19 @@ public class ExpandJsonFilterPlugin
         int i = 0; // columns index
         for (Column inputColumn: inputSchema.getColumns()) {
             if (inputColumn.getName().contentEquals(task.getJsonColumnName())) {
-                logger.info("removed column: name: {}, type: {}, index: {}",
+                if (!task.getKeepExpandingJsonColumn()) {
+                    logger.info("removed column: name: {}, type: {}, index: {}",
                             inputColumn.getName(),
                             inputColumn.getType(),
                             inputColumn.getIndex());
+                }
+                else {
+                    logger.info("unchanged expanding column: name: {}, type: {}, index: {}",
+                            inputColumn.getName(),
+                            inputColumn.getType(),
+                            i);
+                    builder.add(new Column(i++, inputColumn.getName(), inputColumn.getType()));
+                }
                 for (ColumnConfig expandedColumnConfig: task.getExpandedColumns()) {
                     logger.info("added column: name: {}, type: {}, options: {}, index: {}",
                                 expandedColumnConfig.getName(),
