@@ -108,6 +108,7 @@ public class FilteredPageOutput
 
     private final Logger logger = Exec.getLogger(FilteredPageOutput.class);
     private final boolean stopOnInvalidRecord;
+    private final boolean keepExpandingJsonColumn;
     private final List<UnchangedColumn> unchangedColumns;
     private final List<ExpandedColumn> expandedColumns;
     private final Column jsonColumn;
@@ -157,7 +158,7 @@ public class FilteredPageOutput
         for (Column outputColumn : outputSchema.getColumns()) {
             for (Column inputColumn : inputSchema.getColumns()) {
                 if (inputColumn.getName().equals(outputColumn.getName()) &&
-                        !excludeColumn.getName().equals(outputColumn.getName())) {
+                        (!excludeColumn.getName().equals(outputColumn.getName()) || keepExpandingJsonColumn)) {
 
                     UnchangedColumn unchangedColumn = new UnchangedColumn(outputColumn.getName(),
                                                                           inputColumn,
@@ -191,6 +192,7 @@ public class FilteredPageOutput
     FilteredPageOutput(PluginTask task, Schema inputSchema, Schema outputSchema, PageOutput pageOutput)
     {
         this.stopOnInvalidRecord = task.getStopOnInvalidRecord();
+        this.keepExpandingJsonColumn = task.getKeepExpandingJsonColumn();
         this.jsonColumn = initializeJsonColumn(task, inputSchema);
         this.unchangedColumns = initializeUnchangedColumns(inputSchema,
                                                            outputSchema,

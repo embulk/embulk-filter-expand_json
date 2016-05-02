@@ -184,6 +184,8 @@ public class TestExpandJsonFilterPlugin
         assertEquals("$.", task.getRoot());
         assertEquals("UTC", task.getTimeZone());
         assertEquals("%Y-%m-%d %H:%M:%S.%N %z", task.getDefaultTimestampFormat());
+        assertEquals(false, task.getStopOnInvalidRecord());
+        assertEquals(false, task.getKeepExpandingJsonColumn());
     }
 
     /*
@@ -448,6 +450,60 @@ public class TestExpandJsonFilterPlugin
                     assertEquals("Herman Melville", pageReader.getString(outputSchema.getColumn(11)));
                     assertEquals("v12", pageReader.getString(outputSchema.getColumn(12)));
                     assertEquals(c1Data, pageReader.getString(outputSchema.getColumn(13)));
+                }
+            }
+        });
+    }
+
+    @Test
+    public void testExpandedJsonValuesWithKeepJsonColumns()
+    {
+        final String configYaml = "" +
+                "type: expand_json\n" +
+                "json_column_name: _c1\n" +
+                "root: $.\n" +
+                "expanded_columns:\n" +
+                "  - {name: _e0, type: string}\n" +
+                "keep_expanding_json_column: true\n";
+
+        ConfigSource config = getConfigFromYaml(configYaml);
+        final Schema schema = schema("_c0", STRING, "_c1", STRING);
+
+        expandJsonFilterPlugin.transaction(config, schema, new Control()
+        {
+            @Override
+            public void run(TaskSource taskSource, Schema outputSchema)
+            {
+                MockPageOutput mockPageOutput = new MockPageOutput();
+
+                try (PageOutput pageOutput = expandJsonFilterPlugin.open(taskSource, schema, outputSchema, mockPageOutput)) {
+                    for (Page page : PageTestUtils.buildPage(runtime.getBufferAllocator(), schema,
+                            "_v0", "{\"_e0\":\"_ev0\"}")) {
+                        pageOutput.add(page);
+                    }
+
+                    pageOutput.finish();
+                }
+
+                assertEquals(3, outputSchema.getColumnCount());
+                Column column;
+                { // 1st column
+                    column = outputSchema.getColumn(0);
+                    assertTrue(column.getName().equals("_c0") && column.getType().equals(STRING));
+                }
+                { // 2nd column
+                    column = outputSchema.getColumn(1);
+                    assertTrue(column.getName().equals("_c1") && column.getType().equals(STRING));
+                }
+                { // 3rd column
+                    column = outputSchema.getColumn(2);
+                    assertTrue(column.getName().equals("_e0") && column.getType().equals(STRING));
+                }
+
+                for (Object[] record : Pages.toObjects(outputSchema, mockPageOutput.pages)) {
+                    assertEquals("_v0", record[0]);
+                    assertEquals("{\"_e0\":\"_ev0\"}", record[1]);
+                    assertEquals("_ev0", record[2]);
                 }
             }
         });
