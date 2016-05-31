@@ -17,6 +17,7 @@ import org.embulk.spi.time.TimestampParser;
 import org.embulk.spi.type.Types;
 import org.slf4j.Logger;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class ExpandJsonFilterPlugin
@@ -64,8 +65,10 @@ public class ExpandJsonFilterPlugin
             throw new ConfigException(String.format("A column specified as json_column_name option must be string or json type: %s",
                     new Object[] {jsonColumn.toString()}));
         }
+        validateExpandedColumns(task.getExpandedColumns());
 
         Schema outputSchema = buildOutputSchema(task, inputSchema);
+        validateOutputSchema(outputSchema);
         control.run(task.dump(), outputSchema);
     }
 
@@ -124,4 +127,27 @@ public class ExpandJsonFilterPlugin
         return new Schema(builder.build());
     }
 
+    private void validateExpandedColumns(List<ColumnConfig> expandedColumns)
+    {
+        List<String> columnList = new ArrayList<>();
+        for (ColumnConfig columnConfig: expandedColumns) {
+            String columnName = columnConfig.getName();
+            if (columnList.contains(columnName)) {
+                throw new ConfigException(String.format("Column config for '%s' is duplicated at 'expanded_columns' option", columnName));
+            }
+            columnList.add(columnName);
+        }
+    }
+
+    private void validateOutputSchema(Schema outputSchema)
+    {
+        List<String> columnList = new ArrayList<>();
+        for (Column column: outputSchema.getColumns()) {
+            String columnName = column.getName();
+            if (columnList.contains(columnName)) {
+                throw new ConfigException(String.format("Output column '%s' is duplicated. Please check 'expanded_columns' option and Input plugin's settings.", columnName));
+            }
+            columnList.add(columnName);
+        }
+    }
 }

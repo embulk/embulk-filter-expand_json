@@ -165,6 +165,51 @@ public class TestExpandJsonFilterPlugin
     }
 
     @Test
+    public void testThrowExceptionDuplicatedExpandedColumns()
+    {
+        String configYaml = "" +
+                "type: expand_json\n" +
+                "json_column_name: _c0\n" +
+                "expanded_columns:\n" +
+                "  - {name: _c1, type: string}\n" +
+                "  - {name: _c1, type: string}";
+        ConfigSource config = getConfigFromYaml(configYaml);
+        schema = schema("_c0", STRING, "_c1", STRING);
+
+        exception.expect(ConfigException.class);
+        exception.expectMessage("Column config for '_c1' is duplicated at 'expanded_columns' option");
+        expandJsonFilterPlugin.transaction(config, schema, new Control() {
+            @Override
+            public void run(TaskSource taskSource, Schema schema)
+            {
+                // do nothing
+            }
+        });
+    }
+
+    @Test
+    public void testThrowExceptionDuplicatedOutputColumns()
+    {
+        String configYaml = "" +
+                "type: expand_json\n" +
+                "json_column_name: _c0\n" +
+                "expanded_columns:\n" +
+                "  - {name: _c1, type: string}";
+        ConfigSource config = getConfigFromYaml(configYaml);
+        schema = schema("_c0", STRING, "_c0", STRING, "_c1", STRING);
+
+        exception.expect(ConfigException.class);
+        exception.expectMessage("Output column '_c1' is duplicated. Please check 'expanded_columns' option and Input plugin's settings.");
+        expandJsonFilterPlugin.transaction(config, schema, new Control() {
+            @Override
+            public void run(TaskSource taskSource, Schema schema)
+            {
+                // do nothing
+            }
+        });
+    }
+
+    @Test
     public void testDefaultValue()
     {
         String configYaml = "" +
