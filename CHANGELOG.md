@@ -1,3 +1,8 @@
+0.1.2 (2016-05-31)
+==================
+- [Enhancement] Add a validation to check column duplication
+  - https://github.com/civitaspo/embulk-filter-expand_json/pull/21
+
 0.1.1 (2016-05-02)
 ==================
 - [New Feature] Add keep_expanding_json_column option
