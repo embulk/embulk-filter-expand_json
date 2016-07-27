@@ -1,3 +1,8 @@
+0.1.3 (2016-07-27)
+==================
+- [Enhancement] Improve Exception handling
+  - https://github.com/civitaspo/embulk-filter-expand_json/pull/23
+
 0.1.2 (2016-05-31)
 ==================
 - [Enhancement] Add a validation to check column duplication
