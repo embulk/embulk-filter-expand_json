@@ -500,6 +500,65 @@ public class TestExpandJsonFilterPlugin
         });
     }
 
+    @Test(expected = DataException.class)
+    public void testSetExpandedJsonColumnsSetInvalidDoubleValue()
+    {
+        setExpandedJsonColumnsWithInvalidValue("double", s("abcde"));
+    }
+
+    @Test(expected = DataException.class)
+    public void testSetExpandedJsonColumnsSetInvalidLongValue()
+    {
+        setExpandedJsonColumnsWithInvalidValue("long", s("abcde"));
+    }
+
+    @Test(expected = DataException.class)
+    public void testSetExpandedJsonColumnsSetInvalidTimestampValue()
+    {
+        setExpandedJsonColumnsWithInvalidValue("timestamp", s("abcde"));
+    }
+
+    @Test(expected = DataException.class)
+    public void testSetExpandedJsonColumnsSetInvalidJsonValue()
+    {
+        setExpandedJsonColumnsWithInvalidValue("json", s("abcde"));
+    }
+
+    public void setExpandedJsonColumnsWithInvalidValue(String ValidType, final Value invalidValue)
+    {
+        String configYaml = "" +
+                "type: expand_json\n" +
+                "stop_on_invalid_record: 1\n" +
+                "json_column_name: _c0\n" +
+                "root: $.\n" +
+                "time_zone: Asia/Tokyo\n" +
+                "expanded_columns:\n" +
+                "  - {name: _j0, type: " + ValidType + "}\n";
+
+        ConfigSource config = getConfigFromYaml(configYaml);
+        final Schema schema = schema("_c0", JSON, "_c1", STRING);
+
+        expandJsonFilterPlugin.transaction(config, schema, new Control()
+        {
+            @Override
+            public void run(TaskSource taskSource, Schema outputSchema)
+            {
+                MockPageOutput mockPageOutput = new MockPageOutput();
+                Value data = newMapBuilder()
+                        .put(s("_j0"), invalidValue)
+                        .build();
+
+                try (PageOutput pageOutput = expandJsonFilterPlugin.open(taskSource, schema, outputSchema, mockPageOutput)) {
+                    for (Page page : PageTestUtils.buildPage(runtime.getBufferAllocator(), schema, data, c1Data)) {
+                        pageOutput.add(page);
+                    }
+
+                    pageOutput.finish();
+                }
+            }
+        });
+    }
+
     @Test
     public void testExpandedJsonValuesWithKeepJsonColumns()
     {

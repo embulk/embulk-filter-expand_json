@@ -20,7 +20,9 @@ import org.embulk.spi.PageBuilder;
 import org.embulk.spi.PageOutput;
 import org.embulk.spi.PageReader;
 import org.embulk.spi.Schema;
+import org.embulk.spi.json.JsonParseException;
 import org.embulk.spi.json.JsonParser;
+import org.embulk.spi.time.TimestampParseException;
 import org.embulk.spi.time.TimestampParser;
 import org.embulk.spi.type.Types;
 import org.joda.time.DateTimeZone;
@@ -308,22 +310,42 @@ public class FilteredPageOutput
                 pageBuilder.setBoolean(expandedJsonColumn.getColumn(), Boolean.parseBoolean(finalValue));
             }
             else if (Types.DOUBLE.equals(expandedJsonColumn.getColumn().getType())) {
-                pageBuilder.setDouble(expandedJsonColumn.getColumn(), Double.parseDouble(finalValue));
+                try {
+                    pageBuilder.setDouble(expandedJsonColumn.getColumn(), Double.parseDouble(finalValue));
+                }
+                catch (NumberFormatException e) {
+                    throw new JsonValueInvalidException(String.format("Failed to parse '%s' as double", finalValue), e);
+                }
             }
             else if (Types.LONG.equals(expandedJsonColumn.getColumn().getType())) {
-                pageBuilder.setLong(expandedJsonColumn.getColumn(), Long.parseLong(finalValue));
+                try {
+                    pageBuilder.setLong(expandedJsonColumn.getColumn(), Long.parseLong(finalValue));
+                }
+                catch (NumberFormatException e) {
+                    throw new JsonValueInvalidException(String.format("Failed to parse '%s' as long", finalValue), e);
+                }
             }
             else if (Types.TIMESTAMP.equals(expandedJsonColumn.getColumn().getType())) {
                 if (expandedJsonColumn.getTimestampParser().isPresent()) {
                     TimestampParser parser = expandedJsonColumn.getTimestampParser().get();
-                    pageBuilder.setTimestamp(expandedJsonColumn.getColumn(), parser.parse(finalValue));
+                    try {
+                        pageBuilder.setTimestamp(expandedJsonColumn.getColumn(), parser.parse(finalValue));
+                    }
+                    catch (TimestampParseException e) {
+                        throw new JsonValueInvalidException(String.format("Failed to parse '%s' as timestamp", finalValue), e);
+                    }
                 }
                 else {
                     throw new RuntimeException("TimestampParser is absent for column:" + expandedJsonColumn.getKey());
                 }
             }
             else if (Types.JSON.equals(expandedJsonColumn.getColumn().getType())) {
-                pageBuilder.setJson(expandedJsonColumn.getColumn(), jsonParser.parse(finalValue));
+                try {
+                    pageBuilder.setJson(expandedJsonColumn.getColumn(), jsonParser.parse(finalValue));
+                }
+                catch (JsonParseException e) {
+                    throw new JsonValueInvalidException(String.format("Failed to parse '%s' as JSON", finalValue), e);
+                }
             }
         }
     }
@@ -345,6 +367,14 @@ public class FilteredPageOutput
         }
         else {
             return String.valueOf(value);
+        }
+    }
+
+    private class JsonValueInvalidException extends DataException
+    {
+        JsonValueInvalidException(String message, Throwable cause)
+        {
+            super(message, cause);
         }
     }
 }
