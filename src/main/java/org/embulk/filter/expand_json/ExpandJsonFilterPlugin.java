@@ -38,10 +38,12 @@ public class ExpandJsonFilterPlugin
         @Config("expanded_columns")
         public List<ColumnConfig> getExpandedColumns();
 
-        // Time zone of timestamp columns if the value itself doesn’t include time zone description (eg. Asia/Tokyo)
         @Config("time_zone")
         @ConfigDefault("\"UTC\"")
+        @Deprecated
         public String getTimeZone();
+
+        // default_timezone option from TimestampParser.Task
 
         @Config("stop_on_invalid_record")
         @ConfigDefault("false")
