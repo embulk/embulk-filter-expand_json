@@ -44,7 +44,7 @@ filters:
       - {name: "phone_numbers", type: string}
       - {name: "app_id", type: long}
       - {name: "point", type: double}
-      - {name: "created_at", type: timestamp, format: "%Y-%m-%d"}
+      - {name: "created_at", type: timestamp, format: "%Y-%m-%d", timezone: "UTC"}
       - {name: "profile.anniversary.et", type: string}
       - {name: "profile.anniversary.voluptatem", type: string}
       - {name: "profile.like_words[1]", type: string}
