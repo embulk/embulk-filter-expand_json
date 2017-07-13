@@ -11,6 +11,8 @@ import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.ParseContext;
 import com.jayway.jsonpath.ReadContext;
+import org.embulk.config.ConfigSource;
+import org.embulk.config.Task;
 import org.embulk.spi.Column;
 import org.embulk.spi.ColumnConfig;
 import org.embulk.spi.DataException;
@@ -107,6 +109,19 @@ public class FilteredPageOutput
         }
     }
 
+    private interface TimestampColumnOption
+            extends Task, TimestampParser.TimestampColumnOption
+    {
+    }
+
+    private static TimestampParser createTimestampParser(final PluginTask task,
+                                                         final ColumnConfig columnConfig)
+    {
+        final TimestampColumnOption columnOption = columnConfig.getOption().loadConfig(TimestampColumnOption.class);
+        final String format = columnOption.getFormat().or(task.getDefaultTimestampFormat());
+        final DateTimeZone dateTimeZone = columnOption.getTimeZone().or(task.getDefaultTimeZone());
+        return new TimestampParser(task.getJRuby(), format, dateTimeZone);
+    }
 
     private final Logger logger = Exec.getLogger(FilteredPageOutput.class);
     private final boolean stopOnInvalidRecord;
@@ -130,15 +145,7 @@ public class FilteredPageOutput
 
                     TimestampParser timestampParser = null;
                     if (Types.TIMESTAMP.equals(expandedColumnConfig.getType())) {
-                        String format;
-                        if (expandedColumnConfig.getOption().has("format")) {
-                            format = expandedColumnConfig.getOption().get(String.class, "format");
-                        }
-                        else {
-                            format = task.getDefaultTimestampFormat();
-                        }
-                        final DateTimeZone timezone = task.getDefaultTimeZone();
-                        timestampParser = new TimestampParser(task.getJRuby(), format, timezone);
+                        timestampParser = createTimestampParser(task, expandedColumnConfig);
                     }
 
                     ExpandedColumn expandedColumn = new ExpandedColumn(outputColumn.getName(),
