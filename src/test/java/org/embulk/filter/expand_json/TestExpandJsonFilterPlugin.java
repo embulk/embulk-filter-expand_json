@@ -227,7 +227,7 @@ public class TestExpandJsonFilterPlugin
         PluginTask task = config.loadConfig(PluginTask.class);
 
         assertEquals("$.", task.getRoot());
-        assertEquals("UTC", task.getTimeZone());
+        assertEquals("UTC", task.getDefaultTimeZone().getID());
         assertEquals("%Y-%m-%d %H:%M:%S.%N %z", task.getDefaultTimestampFormat());
         assertEquals(false, task.getStopOnInvalidRecord());
         assertEquals(false, task.getKeepExpandingJsonColumn());
@@ -414,7 +414,7 @@ public class TestExpandJsonFilterPlugin
                 "type: expand_json\n" +
                 "json_column_name: _c0\n" +
                 "root: $.\n" +
-                "time_zone: Asia/Tokyo\n" +
+                "default_timezone: Asia/Tokyo\n" +
                 "expanded_columns:\n" +
                 "  - {name: _j0, type: boolean}\n" +
                 "  - {name: _j1, type: long}\n" +
@@ -531,7 +531,7 @@ public class TestExpandJsonFilterPlugin
                 "stop_on_invalid_record: 1\n" +
                 "json_column_name: _c0\n" +
                 "root: $.\n" +
-                "time_zone: Asia/Tokyo\n" +
+                "default_timezone: Asia/Tokyo\n" +
                 "expanded_columns:\n" +
                 "  - {name: _j0, type: " + ValidType + "}\n";
 
@@ -679,7 +679,7 @@ public class TestExpandJsonFilterPlugin
                 "type: expand_json\n" +
                 "json_column_name: _c0\n" +
                 "root: $.\n" +
-                "time_zone: Asia/Tokyo\n" +
+                "default_timezone: Asia/Tokyo\n" +
                 "expanded_columns:\n" +
                 "  - {name: _j0, type: boolean}\n" +
                 "  - {name: _j1, type: long}\n" +
@@ -863,7 +863,7 @@ public class TestExpandJsonFilterPlugin
                 "type: expand_json\n" +
                 "json_column_name: _c0\n" +
                 "root: $.\n" +
-                "time_zone: Asia/Tokyo\n" +
+                "default_timezone: Asia/Tokyo\n" +
                 "expanded_columns:\n" +
                 "  - {name: _j0, type: string}\n";
         ConfigSource config = getConfigFromYaml(configYaml);
