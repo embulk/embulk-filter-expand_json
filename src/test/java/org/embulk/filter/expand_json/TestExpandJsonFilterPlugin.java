@@ -428,6 +428,51 @@ public class TestExpandJsonFilterPlugin
     }
 
     @Test
+    public void testColumnBasedTimezone()
+    {
+        String configYaml = "" +
+                "type: expand_json\n" +
+                "json_column_name: _c0\n" +
+                "root: $.\n" +
+                "expanded_columns:\n" +
+                "  - {name: _j0, type: timestamp, format: '%Y-%m-%d %H:%M:%S %z'}\n" +
+                "  - {name: _j1, type: timestamp, format: '%Y-%m-%d %H:%M:%S', timezone: 'Asia/Tokyo'}\n";
+
+        ConfigSource config = getConfigFromYaml(configYaml);
+        final Schema schema = schema("_c0", JSON, "_c1", STRING);
+
+        expandJsonFilterPlugin.transaction(config, schema, new Control()
+        {
+            @Override
+            public void run(TaskSource taskSource, Schema outputSchema)
+            {
+                MockPageOutput mockPageOutput = new MockPageOutput();
+                Value data = newMapBuilder()
+                        .put(s("_j0"), s("2014-10-21 04:44:33 +0000"))
+                        .put(s("_j1"), s("2014-10-21 04:44:33"))
+                        .build();
+
+                try (PageOutput pageOutput = expandJsonFilterPlugin.open(taskSource, schema, outputSchema, mockPageOutput)) {
+                    for (Page page : PageTestUtils.buildPage(runtime.getBufferAllocator(), schema, data, c1Data)) {
+                        pageOutput.add(page);
+                    }
+
+                    pageOutput.finish();
+                }
+
+                PageReader pageReader = new PageReader(outputSchema);
+
+                for (Page page : mockPageOutput.pages) {
+                    pageReader.setPage(page);
+                    assertEquals("2014-10-21 04:44:33 UTC", pageReader.getTimestamp(outputSchema.getColumn(0)).toString());
+                    assertEquals("2014-10-20 19:44:33 UTC", pageReader.getTimestamp(outputSchema.getColumn(1)).toString());
+                    assertEquals(c1Data, pageReader.getString(outputSchema.getColumn(2)));
+                }
+            }
+        });
+    }
+
+    @Test
     public void testExpandJsonValuesFromJson()
     {
         String configYaml = "" +
