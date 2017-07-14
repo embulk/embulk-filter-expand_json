@@ -38,11 +38,6 @@ public class ExpandJsonFilterPlugin
         @Config("expanded_columns")
         public List<ColumnConfig> getExpandedColumns();
 
-        @Config("time_zone")
-        @ConfigDefault("\"UTC\"")
-        @Deprecated
-        public String getTimeZone();
-
         // default_timezone option from TimestampParser.Task
 
         @Config("stop_on_invalid_record")
@@ -58,6 +53,11 @@ public class ExpandJsonFilterPlugin
     public void transaction(ConfigSource config, Schema inputSchema,
             FilterPlugin.Control control)
     {
+        // check if deprecated 'time_zone' option is used.
+        if (config.has("time_zone")) {
+            throw new ConfigException("'time_zone' option will be deprecated");
+        }
+
         PluginTask task = config.loadConfig(PluginTask.class);
 
         // check if a column specified as json_column_name option exists or not
