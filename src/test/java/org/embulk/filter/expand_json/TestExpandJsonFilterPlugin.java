@@ -165,6 +165,26 @@ public class TestExpandJsonFilterPlugin
     }
 
     @Test
+    public void testThrowConfigExceptionIfTimeZoneIsUsed()
+    {
+        String configYaml = "" +
+                "type: expand_json\n" +
+                "time_zone: Asia/Tokyo\n";
+        ConfigSource config = getConfigFromYaml(configYaml);
+        schema = schema("_c0", STRING, "_c1", STRING);
+
+        exception.expect(ConfigException.class);
+        exception.expectMessage("'time_zone' option will be deprecated");
+        expandJsonFilterPlugin.transaction(config, schema, new Control() {
+            @Override
+            public void run(TaskSource taskSource, Schema schema)
+            {
+                // do nothing
+            }
+        });
+    }
+
+    @Test
     public void testThrowExceptionDuplicatedExpandedColumns()
     {
         String configYaml = "" +
