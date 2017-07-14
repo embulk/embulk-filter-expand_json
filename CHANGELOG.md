@@ -1,3 +1,10 @@
+0.2.0 (2017-07-14)
+==================
+- [Incompatible Change]: Remove `time_zone` option, use `default_timezone` instead and column-based timezone.
+  - https://github.com/civitaspo/embulk-filter-expand_json/pull/27
+  - https://github.com/civitaspo/embulk-filter-expand_json/pull/28
+
+
 0.1.3 (2016-07-27)
 ==================
 - [Enhancement] Improve Exception handling
