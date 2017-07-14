@@ -137,7 +137,7 @@ public class FilteredPageOutput
                         else {
                             format = task.getDefaultTimestampFormat();
                         }
-                        DateTimeZone timezone = DateTimeZone.forID(task.getTimeZone());
+                        final DateTimeZone timezone = task.getDefaultTimeZone();
                         timestampParser = new TimestampParser(task.getJRuby(), format, timezone);
                     }
 
