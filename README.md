@@ -17,6 +17,7 @@ expand columns having json into multiple columns
   - **name**: name of the column. you can define [JsonPath](http://goessner.net/articles/JsonPath/) style.
   - **type**: type of the column (see below)
   - **format**: format of the timestamp if type is timestamp
+  - **timezone**: Time zone of each timestamp columns if values don’t include time zone description (`UTC` by default)
 - **keep_expanding_json_column**: Not remove the expanding json column from input schema if it's true (false by default)
 - **default_timezone**: Time zone of timestamp columns if values don’t include time zone description (`UTC` by default)
 - **stop_on_invalid_record**: Stop bulk load transaction if an invalid record is included (false by default)
