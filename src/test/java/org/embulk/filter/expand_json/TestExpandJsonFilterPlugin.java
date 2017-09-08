@@ -966,6 +966,55 @@ public class TestExpandJsonFilterPlugin
         });
     }
 
+    @Test
+    public void testParseNumbersInExponentialNotation()
+    {
+        final String configYaml = "" +
+                "type: expand_json\n" +
+                "json_column_name: _c1\n" +
+                "root: $.\n" +
+                "expanded_columns:\n" +
+                "  - {name: _j0, type: double}\n" +
+                "  - {name: _j1, type: long}\n";
+        ConfigSource config = getConfigFromYaml(configYaml);
+        final Schema schema = schema("_c1", STRING);
+
+        expandJsonFilterPlugin.transaction(config, schema, new Control()
+        {
+            @Override
+            public void run(TaskSource taskSource, Schema outputSchema)
+            {
+                MockPageOutput mockPageOutput = new MockPageOutput();
+
+                String doubleFloatingPoint = "-1.234e-5";
+                double doubleFixedPoint = -0.00001234; // Use in Asserting.
+                String longFloatingPoint = "12345e3";
+                long longFixedPoint = 12_345_000L; // Use in Asserting.
+
+                String data = String.format(
+                        "{\"_j0\":%s, \"_j1\":%s}",
+                        doubleFloatingPoint,
+                        longFloatingPoint);
+
+                try (PageOutput pageOutput = expandJsonFilterPlugin.open(taskSource, schema, outputSchema, mockPageOutput)) {
+                    for (Page page : PageTestUtils.buildPage(runtime.getBufferAllocator(), schema, data, c1Data)) {
+                        pageOutput.add(page);
+                    }
+
+                    pageOutput.finish();
+                }
+
+                PageReader pageReader = new PageReader(outputSchema);
+
+                for (Page page : mockPageOutput.pages) {
+                    pageReader.setPage(page);
+                    assertEquals(doubleFixedPoint, pageReader.getDouble(outputSchema.getColumn(0)), 0.0);
+                    assertEquals(longFixedPoint, pageReader.getLong(outputSchema.getColumn(1)));
+                }
+            }
+        });
+    }
+
     private static Schema schema(Object... nameAndTypes)
     {
         Schema.Builder builder = Schema.builder();
