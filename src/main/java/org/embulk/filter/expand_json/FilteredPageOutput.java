@@ -329,7 +329,13 @@ public class FilteredPageOutput
                     pageBuilder.setLong(expandedJsonColumn.getColumn(), Long.parseLong(finalValue));
                 }
                 catch (NumberFormatException e) {
-                    throw new JsonValueInvalidException(String.format("Failed to parse '%s' as long", finalValue), e);
+                    // ad-hoc workaround for exponential notation
+                    try {
+                        pageBuilder.setLong(expandedJsonColumn.getColumn(), (long) Double.parseDouble(finalValue));
+                    }
+                    catch (NumberFormatException e2) {
+                        throw new JsonValueInvalidException(String.format("Failed to parse '%s' as long", finalValue), e);
+                    }
                 }
             }
             else if (Types.TIMESTAMP.equals(expandedJsonColumn.getColumn().getType())) {
