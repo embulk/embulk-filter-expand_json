@@ -1,3 +1,8 @@
+0.2.1 (2017-09-12)
+==================
+- [Enhancement] Support type conversion from floating point numbers to integers
+  - https://github.com/civitaspo/embulk-filter-expand_json/pull/33
+
 0.2.0 (2017-07-14)
 ==================
 - [Incompatible Change]: Remove `time_zone` option, use `default_timezone` instead and column-based timezone.
