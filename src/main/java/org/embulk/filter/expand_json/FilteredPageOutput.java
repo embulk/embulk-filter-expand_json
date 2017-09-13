@@ -118,9 +118,7 @@ public class FilteredPageOutput
                                                          final ColumnConfig columnConfig)
     {
         final TimestampColumnOption columnOption = columnConfig.getOption().loadConfig(TimestampColumnOption.class);
-        final String format = columnOption.getFormat().or(task.getDefaultTimestampFormat());
-        final DateTimeZone dateTimeZone = columnOption.getTimeZone().or(task.getDefaultTimeZone());
-        return new TimestampParser(task.getJRuby(), format, dateTimeZone);
+        return new TimestampParser(task, columnOption);
     }
 
     private final Logger logger = Exec.getLogger(FilteredPageOutput.class);
