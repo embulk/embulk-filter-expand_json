@@ -20,11 +20,11 @@ sourceCompatibility = 1.7
 targetCompatibility = 1.7
 
 dependencies {
-    compile  "org.embulk:embulk-core:0.8.6"
-    provided "org.embulk:embulk-core:0.8.6"
+    compile  "org.embulk:embulk-core:0.8.32"
+    provided "org.embulk:embulk-core:0.8.32"
     compile "com.jayway.jsonpath:json-path:2.+"
     testCompile "junit:junit:4.+"
-    testCompile "org.embulk:embulk-core:0.8.6:tests"
+    testCompile "org.embulk:embulk-core:0.8.32:tests"
 }
 
 jacocoTestReport {
