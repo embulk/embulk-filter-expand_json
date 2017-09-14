@@ -1,3 +1,10 @@
+0.2.2 (2017-09-14)
+==================
+- [Enhancement] Use TimestampParser's constructor without JRuby ScriptingContainer
+  - https://github.com/civitaspo/embulk-filter-expand_json/pull/37
+- [Enhancement] embulk migrate .
+  - https://github.com/civitaspo/embulk-filter-expand_json/pull/36
+
 0.2.1 (2017-09-12)
 ==================
 - [Enhancement] Support type conversion from floating point numbers to integers
