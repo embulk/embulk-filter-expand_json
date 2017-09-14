@@ -4,14 +4,12 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Optional;
 import com.google.common.base.Strings;
-import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.ParseContext;
 import com.jayway.jsonpath.ReadContext;
-import org.embulk.config.ConfigSource;
 import org.embulk.config.Task;
 import org.embulk.spi.Column;
 import org.embulk.spi.ColumnConfig;
@@ -27,7 +25,6 @@ import org.embulk.spi.json.JsonParser;
 import org.embulk.spi.time.TimestampParseException;
 import org.embulk.spi.time.TimestampParser;
 import org.embulk.spi.type.Types;
-import org.joda.time.DateTimeZone;
 import org.slf4j.Logger;
 
 import java.util.List;
@@ -118,9 +115,7 @@ public class FilteredPageOutput
                                                          final ColumnConfig columnConfig)
     {
         final TimestampColumnOption columnOption = columnConfig.getOption().loadConfig(TimestampColumnOption.class);
-        final String format = columnOption.getFormat().or(task.getDefaultTimestampFormat());
-        final DateTimeZone dateTimeZone = columnOption.getTimeZone().or(task.getDefaultTimeZone());
-        return new TimestampParser(task.getJRuby(), format, dateTimeZone);
+        return new TimestampParser(task, columnOption);
     }
 
     private final Logger logger = Exec.getLogger(FilteredPageOutput.class);
