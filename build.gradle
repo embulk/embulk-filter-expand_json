@@ -16,15 +16,15 @@ configurations {
 }
 
 version = "0.2.2"
-sourceCompatibility = 1.7
-targetCompatibility = 1.7
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
 
 dependencies {
-    compile  "org.embulk:embulk-core:0.8.32"
-    provided "org.embulk:embulk-core:0.8.32"
+    compile  "org.embulk:embulk-core:0.9.+"
+    provided "org.embulk:embulk-core:0.9.+"
     compile "com.jayway.jsonpath:json-path:2.+"
     testCompile "junit:junit:4.+"
-    testCompile "org.embulk:embulk-core:0.8.32:tests"
+    testCompile "org.embulk:embulk-core:0.9.+:tests"
 }
 
 jacocoTestReport {
