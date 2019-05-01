@@ -1,0 +1,22 @@
+GEM
+  remote: https://rubygems.org/
+  specs:
+    embulk (0.9.16-java)
+      bundler (>= 1.10.6)
+      liquid (~> 4.0.0)
+      msgpack (~> 1.1.0)
+    embulk-filter-speedometer (0.3.4)
+    embulk-parser-none (0.2.0)
+    liquid (4.0.3)
+    msgpack (1.1.0-java)
+
+PLATFORMS
+  java
+
+DEPENDENCIES
+  embulk
+  embulk-filter-speedometer
+  embulk-parser-none
+
+BUNDLED WITH
+   1.16.0

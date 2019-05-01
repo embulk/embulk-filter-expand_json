@@ -21,6 +21,8 @@ expand columns having json into multiple columns
 - **keep_expanding_json_column**: Not remove the expanding json column from input schema if it's true (false by default)
 - **default_timezone**: Time zone of timestamp columns if values don’t include time zone description (`UTC` by default)
 - **stop_on_invalid_record**: Stop bulk load transaction if an invalid record is included (false by default)
+- **cache_provider**: Cache provider name for JsonPath. `"LRU"` and `"NOOP"` are built-in. You can specify user defined class. (string, default: `"LRU"`)
+  - `"NOOP"` becomes default in the future.
 
 ---
 **type of the column**
@@ -53,6 +55,7 @@ filters:
       - {name: "profile.like_words[0]", type: string}
 ```
 
+
 ## Note
 - If the value evaluated by JsonPath is Array or Hash, the value is written as JSON.
 
@@ -61,11 +64,39 @@ filters:
   - use to evaluate [JsonPath](http://goessner.net/articles/JsonPath/)
   - [Apache License Version 2.0](https://github.com/jayway/JsonPath/blob/master/LICENSE)
 
+## Development
 
-## Build
+### Run Example
+
+```
+./gradlew classpath
+embulk run -Ilib ./example/config.yml
+```
+
+
+### Build
 
 ```
 $ ./gradlew gem  # -t to watch change of files and rebuild continuously
+```
+
+## Benchmark for `cache_provider` option
+
+In some cases, `cache_provider: NOOP` improves the performance of this plugin by 3 times (https://github.com/civitaspo/embulk-filter-expand_json/pull/41/).
+So we do a benchmark about `cache_provider`. In our case, `cache_provider: noop` improves the performance by 1.5 times.
+
+|use `expand_json` filter|cache_provider|Time took|records/s|
+|:---|:---|:---|:---|
+|`false`|none|7.62s|1,325,459/s|
+|`true`|`"LRU"`|2m9s|78,025/s|
+|`true`|`"NOOP"`|1m25s|118,476/s|
+
+
+You can reproduce the bench by the below way.
+
+```
+./gradlew classpath
+./bench/run.sh
 ```
 
 ## Contributor

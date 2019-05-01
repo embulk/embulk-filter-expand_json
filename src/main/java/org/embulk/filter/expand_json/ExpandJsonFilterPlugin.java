@@ -1,6 +1,11 @@
 package org.embulk.filter.expand_json;
 
 import com.google.common.collect.ImmutableList;
+import com.jayway.jsonpath.JsonPathException;
+import com.jayway.jsonpath.spi.cache.Cache;
+import com.jayway.jsonpath.spi.cache.CacheProvider;
+import com.jayway.jsonpath.spi.cache.LRUCache;
+import com.jayway.jsonpath.spi.cache.NOOPCache;
 import org.embulk.config.Config;
 import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigException;
@@ -19,6 +24,8 @@ import org.slf4j.Logger;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
+import java.util.Optional;
 
 public class ExpandJsonFilterPlugin
         implements FilterPlugin
@@ -29,14 +36,14 @@ public class ExpandJsonFilterPlugin
             extends Task, TimestampParser.Task
     {
         @Config("json_column_name")
-        public String getJsonColumnName();
+        String getJsonColumnName();
 
         @Config("root")
         @ConfigDefault("\"$.\"")
-        public String getRoot();
+        String getRoot();
 
         @Config("expanded_columns")
-        public List<ColumnConfig> getExpandedColumns();
+        List<ColumnConfig> getExpandedColumns();
 
         // default_timezone option from TimestampParser.Task
 
@@ -46,7 +53,11 @@ public class ExpandJsonFilterPlugin
 
         @Config("keep_expanding_json_column")
         @ConfigDefault("false")
-        public boolean getKeepExpandingJsonColumn();
+        boolean getKeepExpandingJsonColumn();
+
+        @Config("cache_provider")
+        @ConfigDefault("null")
+        Optional<String> getCacheProviderName();
     }
 
     @Override
@@ -59,6 +70,9 @@ public class ExpandJsonFilterPlugin
         }
 
         PluginTask task = config.loadConfig(PluginTask.class);
+
+        // set cache provider
+        task.getCacheProviderName().ifPresent(this::setCacheProvider);
 
         // check if a column specified as json_column_name option exists or not
         Column jsonColumn = inputSchema.lookupColumn(task.getJsonColumnName());
@@ -79,6 +93,8 @@ public class ExpandJsonFilterPlugin
             final Schema outputSchema, final PageOutput output)
     {
         final PluginTask task = taskSource.loadTask(PluginTask.class);
+        // set cache provider for mapreduce executor.
+        task.getCacheProviderName().ifPresent(this::setCacheProviderOrIgnore);
         return new FilteredPageOutput(task, inputSchema, outputSchema, output);
     }
 
@@ -150,6 +166,41 @@ public class ExpandJsonFilterPlugin
                 throw new ConfigException(String.format("Output column '%s' is duplicated. Please check 'expanded_columns' option and Input plugin's settings.", columnName));
             }
             columnList.add(columnName);
+        }
+    }
+
+    private void setCacheProvider(String cacheProviderName)
+    {
+        String upperCacheProviderName = cacheProviderName.toUpperCase(Locale.ENGLISH);
+        switch (upperCacheProviderName)
+        {
+            case "LRU":
+                CacheProvider.setCache(new LRUCache(400));
+                break;
+
+            case "NOOP":
+                CacheProvider.setCache(new NOOPCache());
+                break;
+
+            default:
+                try {
+                    Class<?> klass = Class.forName(cacheProviderName);
+                    Cache cache = (Cache) klass.newInstance();
+                    CacheProvider.setCache(cache);
+                }
+                catch (ClassNotFoundException | IllegalAccessException | InstantiationException | ClassCastException e) {
+                    throw new ConfigException(String.format("Cache Provider '%s' is not supported: %s.", cacheProviderName, e.getMessage()), e);
+                }
+        }
+    }
+
+    private void setCacheProviderOrIgnore(String cacheProviderName)
+    {
+        try {
+            setCacheProvider(cacheProviderName);
+        }
+        catch (JsonPathException e) {
+            logger.debug("Cache:{} is already set.", CacheProvider.getCache().getClass());
         }
     }
 }

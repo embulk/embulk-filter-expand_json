@@ -32,9 +32,6 @@ import java.util.Map;
 
 import static org.embulk.filter.expand_json.ExpandJsonFilterPlugin.PluginTask;
 
-/**
- * Created by takahiro.nakayama on 10/19/15.
- */
 public class FilteredPageOutput
     implements PageOutput
 {

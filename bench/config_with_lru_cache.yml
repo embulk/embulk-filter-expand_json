@@ -1,0 +1,27 @@
+in:
+  type: file
+  path_prefix: data.jsonl
+  parser:
+    type: none
+    column_name: payload
+
+filters:
+  - type: speedometer
+    log_interval_seconds: 1
+  - type: expand_json
+    json_column_name: payload
+    root: "$."
+    expanded_columns:
+      - {name: "phone_numbers", type: string}
+      - {name: "app_id", type: long}
+      - {name: "point", type: double}
+      - {name: "created_at", type: timestamp, format: "%Y-%m-%d"}
+      - {name: "profile.anniversary.et", type: string}
+      - {name: "profile.anniversary", type: string}
+      - {name: "profile.like_words[1]", type: string}
+      - {name: "profile.like_words[2]", type: string}
+      - {name: "profile.like_words", type: string}
+
+out:
+  type: "null"
+

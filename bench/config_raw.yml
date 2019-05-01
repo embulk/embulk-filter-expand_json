@@ -1,0 +1,14 @@
+in:
+  type: file
+  path_prefix: data.jsonl
+  parser:
+    type: none
+    column_name: payload
+
+filters:
+  - type: speedometer
+    log_interval_seconds: 1
+
+out:
+  type: "null"
+
