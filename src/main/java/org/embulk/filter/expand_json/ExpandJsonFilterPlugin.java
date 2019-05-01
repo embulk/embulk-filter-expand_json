@@ -36,14 +36,14 @@ public class ExpandJsonFilterPlugin
             extends Task, TimestampParser.Task
     {
         @Config("json_column_name")
-        public String getJsonColumnName();
+        String getJsonColumnName();
 
         @Config("root")
         @ConfigDefault("\"$.\"")
-        public String getRoot();
+        String getRoot();
 
         @Config("expanded_columns")
-        public List<ColumnConfig> getExpandedColumns();
+        List<ColumnConfig> getExpandedColumns();
 
         // default_timezone option from TimestampParser.Task
 
@@ -53,11 +53,11 @@ public class ExpandJsonFilterPlugin
 
         @Config("keep_expanding_json_column")
         @ConfigDefault("false")
-        public boolean getKeepExpandingJsonColumn();
+        boolean getKeepExpandingJsonColumn();
 
         @Config("cache_provider")
         @ConfigDefault("null")
-        public Optional<String> getCacheProviderName();
+        Optional<String> getCacheProviderName();
     }
 
     @Override

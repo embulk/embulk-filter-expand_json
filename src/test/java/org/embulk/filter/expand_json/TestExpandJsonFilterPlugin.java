@@ -35,7 +35,12 @@ import java.util.List;
 
 import static org.embulk.filter.expand_json.ExpandJsonFilterPlugin.Control;
 import static org.embulk.filter.expand_json.ExpandJsonFilterPlugin.PluginTask;
-import static org.embulk.spi.type.Types.*;
+import static org.embulk.spi.type.Types.BOOLEAN;
+import static org.embulk.spi.type.Types.DOUBLE;
+import static org.embulk.spi.type.Types.JSON;
+import static org.embulk.spi.type.Types.LONG;
+import static org.embulk.spi.type.Types.STRING;
+import static org.embulk.spi.type.Types.TIMESTAMP;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
