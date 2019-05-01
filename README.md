@@ -22,6 +22,7 @@ expand columns having json into multiple columns
 - **default_timezone**: Time zone of timestamp columns if values don’t include time zone description (`UTC` by default)
 - **stop_on_invalid_record**: Stop bulk load transaction if an invalid record is included (false by default)
 - **cache_provider**: Cache provider name for JsonPath. `"LRU"` and `"NOOP"` are built-in. You can specify user defined class. (string, default: `"LRU"`)
+  - `"NOOP"` becomes default in the future.
 
 ---
 **type of the column**
