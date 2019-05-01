@@ -189,7 +189,7 @@ public class ExpandJsonFilterPlugin
                     CacheProvider.setCache(cache);
                 }
                 catch (ClassNotFoundException | IllegalAccessException | InstantiationException | ClassCastException e) {
-                    throw new ConfigException(String.format("Cache Provider %s is not supported: %s", cacheProviderName, e.getMessage()), e);
+                    throw new ConfigException(String.format("Cache Provider '%s' is not supported: %s.", cacheProviderName, e.getMessage()), e);
                 }
         }
     }

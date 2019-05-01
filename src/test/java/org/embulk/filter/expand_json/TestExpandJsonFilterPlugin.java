@@ -6,6 +6,9 @@ import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.jayway.jsonpath.InvalidJsonException;
+import com.jayway.jsonpath.spi.cache.CacheProvider;
+import com.jayway.jsonpath.spi.cache.LRUCache;
+import com.jayway.jsonpath.spi.cache.NOOPCache;
 import org.embulk.EmbulkTestRuntime;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigLoader;
@@ -31,7 +34,9 @@ import org.junit.rules.ExpectedException;
 import org.msgpack.value.MapValue;
 import org.msgpack.value.Value;
 
+import java.lang.reflect.Field;
 import java.util.List;
+import java.util.Optional;
 
 import static org.embulk.filter.expand_json.ExpandJsonFilterPlugin.Control;
 import static org.embulk.filter.expand_json.ExpandJsonFilterPlugin.PluginTask;
@@ -73,6 +78,21 @@ public class TestExpandJsonFilterPlugin
     {
         schema = schema("_c0", STRING, "_c1", STRING); // default schema
         expandJsonFilterPlugin = new ExpandJsonFilterPlugin();
+    }
+
+    @Before
+    public void clearCacheProvider()
+            throws ClassNotFoundException, IllegalAccessException, NoSuchFieldException
+    {
+        // NOTE: CacheProvider has cache as private static variables,
+        //       so clear the variables before tests run.
+        Class<?> klass = Class.forName(CacheProvider.class.getName());
+        Field cache = klass.getDeclaredField("cache");
+        cache.setAccessible(true);
+        cache.set(null, null);
+        Field cachingEnabled = klass.getDeclaredField("cachingEnabled");
+        cachingEnabled.setAccessible(true);
+        cachingEnabled.setBoolean(null, false);
     }
 
     private ConfigSource getConfigFromYaml(String yaml)
@@ -235,6 +255,24 @@ public class TestExpandJsonFilterPlugin
     }
 
     @Test
+    public void testThrowExceptionUnsupportedCacheProvider()
+    {
+        String configYaml = "" +
+                "type: expand_json\n" +
+                "json_column_name: _c0\n" +
+                "cache_provider: unsupported_cache_provider\n" +
+                "expanded_columns:\n" +
+                "  - {name: _e1, type: string}";
+        ConfigSource config = getConfigFromYaml(configYaml);
+
+        exception.expect(ConfigException.class);
+        exception.expectMessage("Cache Provider 'unsupported_cache_provider' is not supported: unsupported_cache_provider.");
+        expandJsonFilterPlugin.transaction(config, schema, (taskSource, schema) -> {
+            // do nothing
+        });
+    }
+
+    @Test
     public void testDefaultValue()
     {
         String configYaml = "" +
@@ -256,6 +294,42 @@ public class TestExpandJsonFilterPlugin
         assertEquals("%Y-%m-%d %H:%M:%S.%N %z", task.getDefaultTimestampFormat());
         assertEquals(false, task.getStopOnInvalidRecord());
         assertEquals(false, task.getKeepExpandingJsonColumn());
+        assertEquals(Optional.empty(), task.getCacheProviderName());
+        expandJsonFilterPlugin.transaction(config, schema, (taskSource, schema) -> {
+            assertEquals(LRUCache.class, CacheProvider.getCache().getClass());
+        });
+    }
+
+    @Test
+    public void testUseNOOPCacheProvider()
+    {
+        String configYaml = "" +
+                "type: expand_json\n" +
+                "json_column_name: _c0\n" +
+                "cache_provider: noop\n" +
+                "expanded_columns:\n" +
+                "  - {name: _e0, type: string}";
+        ConfigSource config = getConfigFromYaml(configYaml);
+
+        expandJsonFilterPlugin.transaction(config, schema, (taskSource, schema) -> {
+            assertEquals(NOOPCache.class, CacheProvider.getCache().getClass());
+        });
+    }
+
+    @Test
+    public void testUseUserDefiledCacheProvider()
+    {
+        String configYaml = "" +
+                "type: expand_json\n" +
+                "json_column_name: _c0\n" +
+                "cache_provider: " + MyNOOPCache.class.getName() + "\n" +
+                "expanded_columns:\n" +
+                "  - {name: _e0, type: string}";
+        ConfigSource config = getConfigFromYaml(configYaml);
+
+        expandJsonFilterPlugin.transaction(config, schema, (taskSource, schema) -> {
+            assertEquals(MyNOOPCache.class, CacheProvider.getCache().getClass());
+        });
     }
 
     /*
