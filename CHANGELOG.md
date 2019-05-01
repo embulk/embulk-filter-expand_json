@@ -1,3 +1,8 @@
+0.3.0 (2019-05-02)
+==================
+- [Enhancement] Introduce `cache_provider` option.
+  - https://github.com/civitaspo/embulk-filter-expand_json/pull/41
+
 0.2.2 (2017-09-14)
 ==================
 - [Enhancement] Use TimestampParser's constructor without JRuby ScriptingContainer
