@@ -1,0 +1,5 @@
+source 'https://rubygems.org'
+
+gem 'embulk'
+gem 'embulk-parser-none'
+gem 'embulk-filter-speedometer'
