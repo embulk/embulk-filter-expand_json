@@ -1,30 +1,66 @@
 plugins {
-    id "com.jfrog.bintray" version "1.1"
-    id "com.github.jruby-gradle.base" version "1.5.0"
     id "com.github.kt3k.coveralls" version "2.4.0"
     id "jacoco"
     id "java"
     id "checkstyle"
+    id "maven-publish"
+    id "org.embulk.embulk-plugins" version "0.2.6"
 }
-import com.github.jrubygradle.JRubyExec
 repositories {
     mavenCentral()
     jcenter()
 }
-configurations {
-    provided
-}
 
-version = "0.3.0"
+// TODO: Set group of this Maven artifact.
+// group = ""
+version = "0.4.0"
+description = "Expand Json"
+
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
-    compile  "org.embulk:embulk-core:0.9.+"
-    provided "org.embulk:embulk-core:0.9.+"
-    compile "com.jayway.jsonpath:json-path:2.+"
+    compileOnly("org.embulk:embulk-core:0.9.23")
+    compile("com.jayway.jsonpath:json-path:2.4.0") {
+        exclude group: "org.slf4j", module: "slf4j-api"
+    }
     testCompile "junit:junit:4.+"
-    testCompile "org.embulk:embulk-core:0.9.+:tests"
+    testCompile "org.embulk:embulk-core:0.9.23:tests"
+
+    // TODO: Remove them.
+    // They are now required because the dependency libraries of them are behind sub ClassLoaders.
+    // Including them in "testCompile" is a tentative workaround.
+    testCompile "org.embulk:embulk-deps-buffer:0.9.23"
+    testCompile "org.embulk:embulk-deps-config:0.9.23"
+}
+
+embulkPlugin {
+    mainClass = "org.embulk.filter.expand_json.ExpandJsonFilterPlugin"
+    category = "filter"
+    type = "expand_json"
+}
+
+publishing {
+    publications {
+        embulkPluginMaven(MavenPublication) {  // Publish it with "publishEmbulkPluginMavenPublicationToMavenRepository".
+            from components.java  // Must be "components.java". The dependency modification works only for it.
+        }
+    }
+    repositories {
+        // TODO: Configure some public Maven repo(s).
+    }
+}
+
+gem {
+    authors = [ "Civitaspo" ]
+    email = [ "civitaspo@gmail.com" ]
+    summary = "Expand Json filter plugin for Embulk"
+    homepage = "https://github.com/civitaspo/embulk-filter-expand_json"
+    licenses = [ "MIT" ]
+}
+
+gemPush {
+    host = "https://rubygems.org"
 }
 
 jacocoTestReport {
@@ -33,13 +69,6 @@ jacocoTestReport {
         html.enabled = true
     }
 }
-
-task classpath(type: Copy, dependsOn: ["jar"]) {
-    doFirst { file("classpath").deleteDir() }
-    from (configurations.runtime - configurations.provided + files(jar.archivePath))
-    into "classpath"
-}
-clean { delete "classpath" }
 
 checkstyle {
     configFile = file("${project.rootDir}/config/checkstyle/checkstyle.xml")
@@ -57,50 +86,3 @@ task checkstyle(type: Checkstyle) {
     classpath = sourceSets.main.output + sourceSets.test.output
     source = sourceSets.main.allJava + sourceSets.test.allJava
 }
-
-task gem(type: JRubyExec, dependsOn: ["gemspec", "classpath"]) {
-    jrubyArgs "-S"
-    script "gem"
-    scriptArgs "build", "${project.name}.gemspec"
-    doLast { ant.move(file: "${project.name}-${project.version}.gem", todir: "pkg") }
-}
-
-task gemPush(type: JRubyExec, dependsOn: ["gem"]) {
-    jrubyArgs "-S"
-    script "gem"
-    scriptArgs "push", "pkg/${project.name}-${project.version}.gem"
-}
-
-task "package"(dependsOn: ["gemspec", "classpath"]) {
-    doLast {
-        println "> Build succeeded."
-        println "> You can run embulk with '-L ${file(".").absolutePath}' argument."
-    }
-}
-
-task gemspec {
-    ext.gemspecFile = file("${project.name}.gemspec")
-    inputs.file "build.gradle"
-    outputs.file gemspecFile
-    doLast { gemspecFile.write($/
-Gem::Specification.new do |spec|
-  spec.name          = "${project.name}"
-  spec.version       = "${project.version}"
-  spec.authors       = ["Civitaspo"]
-  spec.summary       = %[Expand Json filter plugin for Embulk]
-  spec.description   = %[Expand Json]
-  spec.email         = ["civitaspo@gmail.com"]
-  spec.licenses      = ["MIT"]
-  spec.homepage      = "https://github.com/civitaspo/embulk-filter-expand_json"
-
-  spec.files         = `git ls-files`.split("\n") + Dir["classpath/*.jar"]
-  spec.test_files    = spec.files.grep(%r"^(test|spec)/")
-  spec.require_paths = ["lib"]
-
-  spec.add_development_dependency 'bundler', ['~> 1.0']
-  spec.add_development_dependency 'rake', ['>= 10.0']
-end
-/$)
-    }
-}
-clean { delete "${project.name}.gemspec" }

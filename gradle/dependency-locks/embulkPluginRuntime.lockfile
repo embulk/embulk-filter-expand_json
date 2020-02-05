@@ -1,0 +1,7 @@
+# This is a Gradle generated file for dependency locking.
+# Manual edits can break the build and are not advised.
+# This file is expected to be part of source control.
+com.jayway.jsonpath:json-path:2.4.0
+net.minidev:accessors-smart:1.2
+net.minidev:json-smart:2.3
+org.ow2.asm:asm:5.0.4
