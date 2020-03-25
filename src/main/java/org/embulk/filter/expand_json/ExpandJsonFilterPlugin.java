@@ -13,13 +13,13 @@ import org.embulk.config.ConfigSource;
 import org.embulk.config.Task;
 import org.embulk.config.TaskSource;
 import org.embulk.spi.Column;
-import org.embulk.spi.ColumnConfig;
 import org.embulk.spi.Exec;
 import org.embulk.spi.FilterPlugin;
 import org.embulk.spi.PageOutput;
 import org.embulk.spi.Schema;
 import org.embulk.spi.time.TimestampParser;
 import org.embulk.spi.type.Types;
+import org.embulk.spi.type.Type;
 import org.slf4j.Logger;
 
 import java.util.ArrayList;
@@ -31,6 +31,21 @@ public class ExpandJsonFilterPlugin
         implements FilterPlugin
 {
     private final Logger logger = Exec.getLogger(ExpandJsonFilterPlugin.class);
+
+    // NOTE: This is not spi.ColumnConfig
+    public interface ColumnConfig extends Task, TimestampParser.TimestampColumnOption
+    {
+        @Config("name")
+        public String getName();
+
+        @Config("type")
+        public Type getType();
+
+        @Config("path")
+        public String getPath();
+
+        // See TimestampParser for format, and timezone
+    }
 
     public interface PluginTask
             extends Task, TimestampParser.Task
@@ -119,10 +134,9 @@ public class ExpandJsonFilterPlugin
                     builder.add(new Column(i++, inputColumn.getName(), inputColumn.getType()));
                 }
                 for (ColumnConfig expandedColumnConfig: task.getExpandedColumns()) {
-                    logger.info("added column: name: {}, type: {}, options: {}, index: {}",
+                    logger.info("added column: name: {}, type: {}, index: {}",
                                 expandedColumnConfig.getName(),
                                 expandedColumnConfig.getType(),
-                                expandedColumnConfig.getOption(),
                                 i);
                     Column outputColumn = new Column(i++,
                                                      expandedColumnConfig.getName(),

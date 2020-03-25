@@ -12,7 +12,6 @@ import com.jayway.jsonpath.ParseContext;
 import com.jayway.jsonpath.ReadContext;
 import org.embulk.config.Task;
 import org.embulk.spi.Column;
-import org.embulk.spi.ColumnConfig;
 import org.embulk.spi.DataException;
 import org.embulk.spi.Exec;
 import org.embulk.spi.Page;
@@ -31,6 +30,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.embulk.filter.expand_json.ExpandJsonFilterPlugin.PluginTask;
+import static org.embulk.filter.expand_json.ExpandJsonFilterPlugin.ColumnConfig;
 
 public class FilteredPageOutput
     implements PageOutput
@@ -108,13 +108,6 @@ public class FilteredPageOutput
     {
     }
 
-    private static TimestampParser createTimestampParser(final PluginTask task,
-                                                         final ColumnConfig columnConfig)
-    {
-        final TimestampColumnOption columnOption = columnConfig.getOption().loadConfig(TimestampColumnOption.class);
-        return new TimestampParser(task, columnOption);
-    }
-
     private final Logger logger = Exec.getLogger(FilteredPageOutput.class);
     private final boolean stopOnInvalidRecord;
     private final boolean keepExpandingJsonColumn;
@@ -137,12 +130,12 @@ public class FilteredPageOutput
 
                     TimestampParser timestampParser = null;
                     if (Types.TIMESTAMP.equals(expandedColumnConfig.getType())) {
-                        timestampParser = createTimestampParser(task, expandedColumnConfig);
+                        timestampParser = new TimestampParser(task, expandedColumnConfig);
                     }
 
                     ExpandedColumn expandedColumn = new ExpandedColumn(outputColumn.getName(),
                                                                        outputColumn,
-                                                                       task.getRoot() + outputColumn.getName(),
+                                                                       task.getRoot() + expandedColumnConfig.getPath(),
                                                                        Optional.fromNullable(timestampParser));
                     expandedJsonColumnsBuilder.add(expandedColumn);
                 }

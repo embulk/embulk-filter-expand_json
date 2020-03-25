@@ -21,15 +21,15 @@ filters:
     json_column_name: json_payload
     root: "$."
     expanded_columns:
-      - {name: "phone_numbers", type: string}
-      - {name: "app_id", type: long}
-      - {name: "point", type: double}
-      - {name: "created_at", type: timestamp, format: "%Y-%m-%d"}
-      - {name: "profile.anniversary.et", type: string}
-      - {name: "profile.anniversary", type: string}
-      - {name: "profile.like_words[1]", type: string}
-      - {name: "profile.like_words[2]", type: string}
-      - {name: "profile.like_words", type: string}
+      - {name: "phone_numbers", path: "phone_numbers", type: string}
+      - {name: "app", path: "app_id", path: "", type: long}
+      - {name: "point", path: "point", type: double}
+      - {name: "created_at", path: "created_at", type: timestamp, format: "%Y-%m-%d"}
+      - {name: "anniversary_et", path: "profile.anniversary.et", type: string}
+      - {name: "anniversary", path: "profile.anniversary", type: string}
+      - {name: "like_words_1", path: "profile.like_words[1]", type: string}
+      - {name: "like_words_2", path: "profile.like_words[2]", type: string}
+      - {name: "like_words", path: "profile.like_words", type: string}
 
 out:
   type: stdout

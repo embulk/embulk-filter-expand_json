@@ -14,7 +14,8 @@ expand columns having json into multiple columns
 - **json_column_name**: a column name having json to be expanded (string, required)
 - **root**: root property to start fetching each entries, specify in [JsonPath](http://goessner.net/articles/JsonPath/) style (string, default: `"$."`)
 - **expanded_columns**: columns expanded into multiple columns (array of hash, required)
-  - **name**: name of the column. you can define [JsonPath](http://goessner.net/articles/JsonPath/) style.
+  - **name**: name of the column.
+  - **name**: JSON path of the column. you can define [JsonPath](http://goessner.net/articles/JsonPath/) style.
   - **type**: type of the column (see below)
   - **format**: format of the timestamp if type is timestamp
   - **timezone**: Time zone of each timestamp columns if values don’t include time zone description (`UTC` by default)
@@ -44,15 +45,15 @@ filters:
     json_column_name: json_payload
     root: "$."
     expanded_columns:
-      - {name: "phone_numbers", type: string}
-      - {name: "app_id", type: long}
-      - {name: "point", type: double}
-      - {name: "created_at", type: timestamp, format: "%Y-%m-%d", timezone: "UTC"}
-      - {name: "profile.anniversary.et", type: string}
-      - {name: "profile.anniversary.voluptatem", type: string}
-      - {name: "profile.like_words[1]", type: string}
-      - {name: "profile.like_words[2]", type: string}
-      - {name: "profile.like_words[0]", type: string}
+      - {name: "phone_numbers", path: "phone_numbers", type: string}
+      - {name: "app_id", path: "app_id", type: long}
+      - {name: "point", path: "point", type: double}
+      - {name: "created_at", path: "created_at", type: timestamp, format: "%Y-%m-%d", timezone: "UTC"}
+      - {name: "profile_anniversary_et", path: "profile.anniversary.et", type: string}
+      - {name: "profile_anniversary_voluptatem", path: "profile.anniversary.voluptatem", type: string}
+      - {name: "profile_like_words_1", path: "profile.like_words[1]", type: string}
+      - {name: "profile_like_words_2", path: "profile.like_words[2]", type: string}
+      - {name: "profile_like_words_0", path: "profile.like_words[0]", type: string}
 ```
 
 
