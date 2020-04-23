@@ -1,3 +1,10 @@
+0.4.0 (2020-04-24)
+==================
+- [Enhancement] Build with the "org.embulk.embulk-plugins" Gradle plugin
+  - https://github.com/civitaspo/embulk-filter-expand_json/pull/45
+- [Enhancement] Use Github Actions instead of Travis CI.
+  - https://github.com/civitaspo/embulk-filter-expand_json/pull/46
+
 0.3.0 (2019-05-02)
 ==================
 - [Enhancement] Introduce `cache_provider` option.
