@@ -1,5 +1,5 @@
 plugins {
-    id "com.github.kt3k.coveralls" version "2.4.0"
+    id "com.github.kt3k.coveralls" version "2.10.1"
     id "jacoco"
     id "java"
     id "checkstyle"
@@ -23,14 +23,19 @@ dependencies {
     compile("com.jayway.jsonpath:json-path:2.4.0") {
         exclude group: "org.slf4j", module: "slf4j-api"
     }
-    testCompile "junit:junit:4.+"
-    testCompile "org.embulk:embulk-core:0.9.23:tests"
-
+    testImplementation "junit:junit:4.+"
+    testImplementation "org.embulk:embulk-core:0.9.23:tests"
+    testImplementation "org.embulk:embulk-core:0.9.23"
     // TODO: Remove them.
     // They are now required because the dependency libraries of them are behind sub ClassLoaders.
     // Including them in "testCompile" is a tentative workaround.
-    testCompile "org.embulk:embulk-deps-buffer:0.9.23"
-    testCompile "org.embulk:embulk-deps-config:0.9.23"
+    testImplementation "org.embulk:embulk-deps-buffer:0.9.23"
+    testImplementation "org.embulk:embulk-deps-config:0.9.23"
+}
+
+test {
+    jvmArgs '-Xms4g', '-Xmx4g', '-XX:MaxMetaspaceSize=1g'
+    maxHeapSize = "4g"
 }
 
 embulkPlugin {
