@@ -69,8 +69,8 @@ filters:
 ### Run Example
 
 ```
-./gradlew classpath
-embulk run -Ilib ./example/config.yml
+$ ./gradlew gem
+$ embulk run -Ibuild/gemContents/lib ./example/config.yml
 ```
 
 
