@@ -1,6 +1,6 @@
 # Expand Json filter plugin for Embulk
 
-![Release CI Status Badge](https://github.com/civitaspo/embulk-filter-expand_json/workflows/Release%20CI/badge.svg) ![Test CI Status Badge](https://github.com/civitaspo/embulk-filter-expand_json/workflows/Test%20CI/badge.svg)
+[![Release CI Status Badge](https://github.com/civitaspo/embulk-filter-expand_json/workflows/Release%20CI/badge.svg)](https://github.com/civitaspo/embulk-filter-expand_json/actions?query=workflow%3A%22Release+CI%22) [![Test CI Status Badge](https://github.com/civitaspo/embulk-filter-expand_json/workflows/Test%20CI/badge.svg)](https://github.com/civitaspo/embulk-filter-expand_json/actions?query=workflow%3A%22Test+CI%22)
 [![Coverage Status](https://coveralls.io/repos/civitaspo/embulk-filter-expand_json/badge.svg?branch=master&service=github)](https://coveralls.io/github/civitaspo/embulk-filter-expand_json?branch=master)
 
 expand columns having json into multiple columns
