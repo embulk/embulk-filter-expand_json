@@ -26,6 +26,7 @@ import org.embulk.spi.time.TimestampParseException;
 import org.embulk.spi.time.TimestampParser;
 import org.embulk.spi.type.Types;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.List;
 import java.util.Map;
@@ -115,7 +116,7 @@ public class FilteredPageOutput
         return new TimestampParser(task, columnOption);
     }
 
-    private final Logger logger = Exec.getLogger(FilteredPageOutput.class);
+    private static final Logger logger = LoggerFactory.getLogger(FilteredPageOutput.class);
     private final boolean stopOnInvalidRecord;
     private final boolean keepExpandingJsonColumn;
     private final List<UnchangedColumn> unchangedColumns;
@@ -238,7 +239,7 @@ public class FilteredPageOutput
         pageBuilder.close();
     }
 
-    
+
     private void setUnchangedColumns() {
         for (UnchangedColumn unchangedColumn : unchangedColumns) {
             Column inputColumn = unchangedColumn.getInputColumn();

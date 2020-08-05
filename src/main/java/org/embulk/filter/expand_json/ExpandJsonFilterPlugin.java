@@ -14,13 +14,13 @@ import org.embulk.config.Task;
 import org.embulk.config.TaskSource;
 import org.embulk.spi.Column;
 import org.embulk.spi.ColumnConfig;
-import org.embulk.spi.Exec;
 import org.embulk.spi.FilterPlugin;
 import org.embulk.spi.PageOutput;
 import org.embulk.spi.Schema;
 import org.embulk.spi.time.TimestampParser;
 import org.embulk.spi.type.Types;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,7 +30,7 @@ import java.util.Optional;
 public class ExpandJsonFilterPlugin
         implements FilterPlugin
 {
-    private final Logger logger = Exec.getLogger(ExpandJsonFilterPlugin.class);
+    private static final Logger logger = LoggerFactory.getLogger(ExpandJsonFilterPlugin.class);
 
     public interface PluginTask
             extends Task, TimestampParser.Task
