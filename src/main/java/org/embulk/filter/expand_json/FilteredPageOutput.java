@@ -2,9 +2,6 @@ package org.embulk.filter.expand_json;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.google.common.base.Optional;
-import com.google.common.base.Strings;
-import com.google.common.collect.ImmutableList;
 import com.jayway.jsonpath.Configuration;
 import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
@@ -28,8 +25,11 @@ import org.embulk.spi.type.Types;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.embulk.filter.expand_json.ExpandJsonFilterPlugin.PluginTask;
 
@@ -131,7 +131,7 @@ public class FilteredPageOutput
     private List<ExpandedColumn> initializeExpandedColumns(PluginTask task,
                                                            Schema outputSchema)
     {
-        ImmutableList.Builder<ExpandedColumn> expandedJsonColumnsBuilder = ImmutableList.builder();
+        final ArrayList<ExpandedColumn> expandedJsonColumnsBuilder = new ArrayList<>();
         for (Column outputColumn : outputSchema.getColumns()) {
             for (ColumnConfig expandedColumnConfig : task.getExpandedColumns()) {
                 if (outputColumn.getName().equals(expandedColumnConfig.getName())) {
@@ -144,19 +144,19 @@ public class FilteredPageOutput
                     ExpandedColumn expandedColumn = new ExpandedColumn(outputColumn.getName(),
                                                                        outputColumn,
                                                                        task.getRoot() + outputColumn.getName(),
-                                                                       Optional.fromNullable(timestampParser));
+                                                                       Optional.ofNullable(timestampParser));
                     expandedJsonColumnsBuilder.add(expandedColumn);
                 }
             }
         }
-        return expandedJsonColumnsBuilder.build();
+        return Collections.unmodifiableList(expandedJsonColumnsBuilder);
     }
 
     private List<UnchangedColumn> initializeUnchangedColumns(Schema inputSchema,
                                                              Schema outputSchema,
                                                              Column excludeColumn)
     {
-        ImmutableList.Builder<UnchangedColumn> unchangedColumnsBuilder = ImmutableList.builder();
+        final ArrayList<UnchangedColumn> unchangedColumnsBuilder = new ArrayList<>();
         for (Column outputColumn : outputSchema.getColumns()) {
             for (Column inputColumn : inputSchema.getColumns()) {
                 if (inputColumn.getName().equals(outputColumn.getName()) &&
@@ -169,7 +169,7 @@ public class FilteredPageOutput
                 }
             }
         }
-        return unchangedColumnsBuilder.build();
+        return Collections.unmodifiableList(unchangedColumnsBuilder);
     }
 
     private Column initializeJsonColumn(PluginTask task, Schema inputSchema)
@@ -287,7 +287,11 @@ public class FilteredPageOutput
                 jsonObject = pageReader.getString(jsonColumn);
             }
 
-            json = Strings.isNullOrEmpty(jsonObject) ? null : parseContext.parse(jsonObject);
+            if (jsonObject == null || jsonObject.isEmpty()) {
+                json = null;
+            } else {
+                json = parseContext.parse(jsonObject);
+            }
         }
 
         for (ExpandedColumn expandedJsonColumn: expandedColumns) {

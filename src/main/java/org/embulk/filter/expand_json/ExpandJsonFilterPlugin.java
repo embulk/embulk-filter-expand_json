@@ -1,6 +1,5 @@
 package org.embulk.filter.expand_json;
 
-import com.google.common.collect.ImmutableList;
 import com.jayway.jsonpath.JsonPathException;
 import com.jayway.jsonpath.spi.cache.Cache;
 import com.jayway.jsonpath.spi.cache.CacheProvider;
@@ -23,6 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -100,7 +100,7 @@ public class ExpandJsonFilterPlugin
 
     private Schema buildOutputSchema(PluginTask task, Schema inputSchema)
     {
-        ImmutableList.Builder<Column> builder = ImmutableList.builder();
+        final ArrayList<Column> builder = new ArrayList<>();
 
         int i = 0; // columns index
         for (Column inputColumn: inputSchema.getColumns()) {
@@ -142,7 +142,7 @@ public class ExpandJsonFilterPlugin
             }
         }
 
-        return new Schema(builder.build());
+        return new Schema(Collections.unmodifiableList(builder));
     }
 
     private void validateExpandedColumns(List<ColumnConfig> expandedColumns)
