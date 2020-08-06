@@ -7,6 +7,8 @@ import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.ParseContext;
 import com.jayway.jsonpath.ReadContext;
+import org.embulk.config.Config;
+import org.embulk.config.ConfigDefault;
 import org.embulk.config.Task;
 import org.embulk.spi.Column;
 import org.embulk.spi.ColumnConfig;
@@ -17,14 +19,15 @@ import org.embulk.spi.PageBuilder;
 import org.embulk.spi.PageOutput;
 import org.embulk.spi.PageReader;
 import org.embulk.spi.Schema;
-import org.embulk.spi.time.TimestampParseException;
-import org.embulk.spi.time.TimestampParser;
+import org.embulk.spi.time.Timestamp;
 import org.embulk.spi.type.Types;
 import org.embulk.util.json.JsonParseException;
 import org.embulk.util.json.JsonParser;
+import org.embulk.util.timestamp.TimestampFormatter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -41,17 +44,17 @@ public class FilteredPageOutput
         private final String key;
         private final Column column;
         private final String jsonPath;
-        private final Optional<TimestampParser> timestampParser;
+        private final Optional<TimestampFormatter> timestampFormatter;
 
         ExpandedColumn(String key,
                        Column column,
                        String jsonPath,
-                       Optional<TimestampParser> timestampParser)
+                       Optional<TimestampFormatter> timestampFormatter)
         {
             this.key = key;
             this.column = column;
             this.jsonPath = jsonPath;
-            this.timestampParser = timestampParser;
+            this.timestampFormatter = timestampFormatter;
         }
 
         public String getKey()
@@ -69,9 +72,9 @@ public class FilteredPageOutput
             return jsonPath;
         }
 
-        public Optional<TimestampParser> getTimestampParser()
+        public Optional<TimestampFormatter> getTimestampFormatter()
         {
-            return timestampParser;
+            return timestampFormatter;
         }
     }
 
@@ -104,16 +107,30 @@ public class FilteredPageOutput
         }
     }
 
+    // Copied from org.embulk.spi.time.TimestampParser.TimestampColumnOption for embulk-util-timestamp.
     private interface TimestampColumnOption
-            extends Task, TimestampParser.TimestampColumnOption
-    {
+            extends Task {
+        @Config("timezone")
+        @ConfigDefault("null")
+        Optional<String> getTimeZoneId();
+
+        @Config("format")
+        @ConfigDefault("null")
+        Optional<String> getFormat();
+
+        @Config("date")
+        @ConfigDefault("null")
+        Optional<String> getDate();
     }
 
-    private static TimestampParser createTimestampParser(final PluginTask task,
-                                                         final ColumnConfig columnConfig)
+    private static TimestampFormatter createTimestampFormatter(final PluginTask task,
+                                                               final ColumnConfig columnConfig)
     {
         final TimestampColumnOption columnOption = columnConfig.getOption().loadConfig(TimestampColumnOption.class);
-        return new TimestampParser(task, columnOption);
+        return TimestampFormatter.builder(columnOption.getFormat().orElse(task.getDefaultTimestampFormat()), true)
+                .setDefaultZoneFromString(columnOption.getTimeZoneId().orElse(task.getDefaultTimeZoneId()))
+                .setDefaultDateFromString(columnOption.getDate().orElse(task.getDefaultDate()))
+                .build();
     }
 
     private static final Logger logger = LoggerFactory.getLogger(FilteredPageOutput.class);
@@ -136,15 +153,15 @@ public class FilteredPageOutput
             for (ColumnConfig expandedColumnConfig : task.getExpandedColumns()) {
                 if (outputColumn.getName().equals(expandedColumnConfig.getName())) {
 
-                    TimestampParser timestampParser = null;
+                    TimestampFormatter timestampFormatter = null;
                     if (Types.TIMESTAMP.equals(expandedColumnConfig.getType())) {
-                        timestampParser = createTimestampParser(task, expandedColumnConfig);
+                        timestampFormatter = createTimestampFormatter(task, expandedColumnConfig);
                     }
 
                     ExpandedColumn expandedColumn = new ExpandedColumn(outputColumn.getName(),
                                                                        outputColumn,
                                                                        task.getRoot() + outputColumn.getName(),
-                                                                       Optional.ofNullable(timestampParser));
+                                                                       Optional.ofNullable(timestampFormatter));
                     expandedJsonColumnsBuilder.add(expandedColumn);
                 }
             }
@@ -336,17 +353,17 @@ public class FilteredPageOutput
                 }
             }
             else if (Types.TIMESTAMP.equals(expandedJsonColumn.getColumn().getType())) {
-                if (expandedJsonColumn.getTimestampParser().isPresent()) {
-                    TimestampParser parser = expandedJsonColumn.getTimestampParser().get();
+                if (expandedJsonColumn.getTimestampFormatter().isPresent()) {
+                    TimestampFormatter formatter = expandedJsonColumn.getTimestampFormatter().get();
                     try {
-                        pageBuilder.setTimestamp(expandedJsonColumn.getColumn(), parser.parse(finalValue));
+                        pageBuilder.setTimestamp(expandedJsonColumn.getColumn(), Timestamp.ofInstant(formatter.parse(finalValue)));
                     }
-                    catch (TimestampParseException e) {
+                    catch (DateTimeParseException e) {
                         throw new JsonValueInvalidException(String.format("Failed to parse '%s' as timestamp", finalValue), e);
                     }
                 }
                 else {
-                    throw new RuntimeException("TimestampParser is absent for column:" + expandedJsonColumn.getKey());
+                    throw new RuntimeException("TimestampFormatter is absent for column:" + expandedJsonColumn.getKey());
                 }
             }
             else if (Types.JSON.equals(expandedJsonColumn.getColumn().getType())) {

@@ -35,6 +35,7 @@ dependencies {
         // It is just exluded here.
         exclude group: "org.msgpack", module: "msgpack-core"
     }
+    compile("org.embulk:embulk-util-timestamp:0.2.0")
 
     // They are once excluded from transitive dependencies of other dependencies,
     // and added explicitly with versions exactly the same with embulk-core:0.10.5.
