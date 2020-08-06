@@ -17,11 +17,11 @@ import org.embulk.spi.PageBuilder;
 import org.embulk.spi.PageOutput;
 import org.embulk.spi.PageReader;
 import org.embulk.spi.Schema;
-import org.embulk.spi.json.JsonParseException;
-import org.embulk.spi.json.JsonParser;
 import org.embulk.spi.time.TimestampParseException;
 import org.embulk.spi.time.TimestampParser;
 import org.embulk.spi.type.Types;
+import org.embulk.util.json.JsonParseException;
+import org.embulk.util.json.JsonParser;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 

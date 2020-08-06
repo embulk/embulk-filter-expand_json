@@ -24,6 +24,17 @@ dependencies {
     compile("com.jayway.jsonpath:json-path:2.4.0") {
         exclude group: "org.slf4j", module: "slf4j-api"
     }
+    compile("org.embulk:embulk-util-json:0.1.0") {
+        // They conflict with embulk-core:0.10.6. They are once excluded here,
+        // and added explicitly with versions exactly the same with embulk-core:0.10.6.
+        exclude group: "com.fasterxml.jackson.core", module: "jackson-annotations"
+        exclude group: "com.fasterxml.jackson.core", module: "jackson-core"
+        exclude group: "com.fasterxml.jackson.core", module: "jackson-databind"
+
+        // It conflicts with embulk-core:0.10.6, and it is expected to stay in embulk-api.
+        // It is just exluded here.
+        exclude group: "org.msgpack", module: "msgpack-core"
+    }
 
     // They are once excluded from transitive dependencies of other dependencies,
     // and added explicitly with versions exactly the same with embulk-core:0.10.5.
