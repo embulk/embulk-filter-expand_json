@@ -1,6 +1,5 @@
 package org.embulk.filter.expand_json;
 
-import com.google.common.collect.ImmutableList;
 import com.jayway.jsonpath.JsonPathException;
 import com.jayway.jsonpath.spi.cache.Cache;
 import com.jayway.jsonpath.spi.cache.CacheProvider;
@@ -14,15 +13,15 @@ import org.embulk.config.Task;
 import org.embulk.config.TaskSource;
 import org.embulk.spi.Column;
 import org.embulk.spi.ColumnConfig;
-import org.embulk.spi.Exec;
 import org.embulk.spi.FilterPlugin;
 import org.embulk.spi.PageOutput;
 import org.embulk.spi.Schema;
-import org.embulk.spi.time.TimestampParser;
 import org.embulk.spi.type.Types;
 import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
@@ -30,10 +29,10 @@ import java.util.Optional;
 public class ExpandJsonFilterPlugin
         implements FilterPlugin
 {
-    private final Logger logger = Exec.getLogger(ExpandJsonFilterPlugin.class);
+    private static final Logger logger = LoggerFactory.getLogger(ExpandJsonFilterPlugin.class);
 
     public interface PluginTask
-            extends Task, TimestampParser.Task
+            extends Task
     {
         @Config("json_column_name")
         String getJsonColumnName();
@@ -45,7 +44,19 @@ public class ExpandJsonFilterPlugin
         @Config("expanded_columns")
         List<ColumnConfig> getExpandedColumns();
 
-        // default_timezone option from TimestampParser.Task
+        // default_timezone and other options copied from TimestampParser.Task
+
+        @Config("default_timezone")
+        @ConfigDefault("\"UTC\"")
+        String getDefaultTimeZoneId();
+
+        @Config("default_timestamp_format")
+        @ConfigDefault("\"%Y-%m-%d %H:%M:%S.%N %z\"")
+        String getDefaultTimestampFormat();
+
+        @Config("default_date")
+        @ConfigDefault("\"1970-01-01\"")
+        String getDefaultDate();
 
         @Config("stop_on_invalid_record")
         @ConfigDefault("false")
@@ -100,7 +111,7 @@ public class ExpandJsonFilterPlugin
 
     private Schema buildOutputSchema(PluginTask task, Schema inputSchema)
     {
-        ImmutableList.Builder<Column> builder = ImmutableList.builder();
+        final ArrayList<Column> builder = new ArrayList<>();
 
         int i = 0; // columns index
         for (Column inputColumn: inputSchema.getColumns()) {
@@ -142,7 +153,7 @@ public class ExpandJsonFilterPlugin
             }
         }
 
-        return new Schema(builder.build());
+        return new Schema(Collections.unmodifiableList(builder));
     }
 
     private void validateExpandedColumns(List<ColumnConfig> expandedColumns)

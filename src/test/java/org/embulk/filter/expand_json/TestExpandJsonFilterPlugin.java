@@ -294,7 +294,7 @@ public class TestExpandJsonFilterPlugin
         PluginTask task = config.loadConfig(PluginTask.class);
 
         assertEquals("$.", task.getRoot());
-        assertEquals("UTC", task.getDefaultTimeZone().getID());
+        assertEquals("UTC", task.getDefaultTimeZoneId());
         assertEquals("%Y-%m-%d %H:%M:%S.%N %z", task.getDefaultTimestampFormat());
         assertEquals(false, task.getStopOnInvalidRecord());
         assertEquals(false, task.getKeepExpandingJsonColumn());

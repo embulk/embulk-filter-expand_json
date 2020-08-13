@@ -4,7 +4,7 @@ plugins {
     id "java"
     id "checkstyle"
     id "maven-publish"
-    id "org.embulk.embulk-plugins" version "0.4.1"
+    id "org.embulk.embulk-plugins" version "0.4.2"
 }
 repositories {
     mavenCentral()
@@ -19,18 +19,40 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 dependencies {
-    compileOnly("org.embulk:embulk-core:0.9.23")
+    compileOnly("org.embulk:embulk-api:0.10.6")
+    compileOnly("org.embulk:embulk-core:0.10.6")
     compile("com.jayway.jsonpath:json-path:2.4.0") {
         exclude group: "org.slf4j", module: "slf4j-api"
     }
+    compile("org.embulk:embulk-util-json:0.1.0") {
+        // They conflict with embulk-core:0.10.6. They are once excluded here,
+        // and added explicitly with versions exactly the same with embulk-core:0.10.6.
+        exclude group: "com.fasterxml.jackson.core", module: "jackson-annotations"
+        exclude group: "com.fasterxml.jackson.core", module: "jackson-core"
+        exclude group: "com.fasterxml.jackson.core", module: "jackson-databind"
+
+        // It conflicts with embulk-core:0.10.6, and it is expected to stay in embulk-api.
+        // It is just exluded here.
+        exclude group: "org.msgpack", module: "msgpack-core"
+    }
+    compile("org.embulk:embulk-util-timestamp:0.2.0")
+
+    // They are once excluded from transitive dependencies of other dependencies,
+    // and added explicitly with versions exactly the same with embulk-core:0.10.5.
+    compile("com.fasterxml.jackson.core:jackson-annotations:2.6.7")
+    compile("com.fasterxml.jackson.core:jackson-core:2.6.7")
+    compile("com.fasterxml.jackson.core:jackson-databind:2.6.7")
+
     testImplementation "junit:junit:4.+"
-    testImplementation "org.embulk:embulk-core:0.9.23:tests"
-    testImplementation "org.embulk:embulk-core:0.9.23"
+    testImplementation "org.embulk:embulk-core:0.10.6:tests"
+    testImplementation "org.embulk:embulk-core:0.10.6"
+
     // TODO: Remove them.
     // They are now required because the dependency libraries of them are behind sub ClassLoaders.
     // Including them in "testCompile" is a tentative workaround.
-    testImplementation "org.embulk:embulk-deps-buffer:0.9.23"
-    testImplementation "org.embulk:embulk-deps-config:0.9.23"
+    testImplementation "org.embulk:embulk-deps-buffer:0.10.6"
+    testImplementation "org.embulk:embulk-deps-config:0.10.6"
+    testImplementation "org.embulk:embulk-deps-timestamp:0.10.6"
 }
 
 test {
@@ -42,6 +64,14 @@ embulkPlugin {
     mainClass = "org.embulk.filter.expand_json.ExpandJsonFilterPlugin"
     category = "filter"
     type = "expand_json"
+    ignoreConflicts = [
+        // They conflict with embulk-core:0.10.6, but embulk-core will remove them from its dependencies.
+        // They are intentionally included in the plugin's dependencies to keep it working before and after the removal.
+        // Warning messages against them are marked to ignore explicitly here.
+        [ group: "com.fasterxml.jackson.core", module: "jackson-annotations" ],
+        [ group: "com.fasterxml.jackson.core", module: "jackson-core" ],
+        [ group: "com.fasterxml.jackson.core", module: "jackson-databind" ],
+    ]
 }
 
 publishing {
