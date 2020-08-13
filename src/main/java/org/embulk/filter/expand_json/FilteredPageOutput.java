@@ -7,9 +7,6 @@ import com.jayway.jsonpath.JsonPath;
 import com.jayway.jsonpath.Option;
 import com.jayway.jsonpath.ParseContext;
 import com.jayway.jsonpath.ReadContext;
-import org.embulk.config.Config;
-import org.embulk.config.ConfigDefault;
-import org.embulk.config.Task;
 import org.embulk.spi.Column;
 import org.embulk.spi.ColumnConfig;
 import org.embulk.spi.DataException;
@@ -21,6 +18,12 @@ import org.embulk.spi.PageReader;
 import org.embulk.spi.Schema;
 import org.embulk.spi.time.Timestamp;
 import org.embulk.spi.type.Types;
+import org.embulk.util.config.Config;
+import org.embulk.util.config.ConfigDefault;
+import org.embulk.util.config.ConfigMapper;
+import org.embulk.util.config.ConfigMapperFactory;
+import org.embulk.util.config.Task;
+import org.embulk.util.config.TaskMapper;
 import org.embulk.util.json.JsonParseException;
 import org.embulk.util.json.JsonParser;
 import org.embulk.util.timestamp.TimestampFormatter;
@@ -126,7 +129,8 @@ public class FilteredPageOutput
     private static TimestampFormatter createTimestampFormatter(final PluginTask task,
                                                                final ColumnConfig columnConfig)
     {
-        final TimestampColumnOption columnOption = columnConfig.getOption().loadConfig(TimestampColumnOption.class);
+        final ConfigMapper configMapper = ExpandJsonFilterPlugin.getConfigMapperFactory().createConfigMapper();
+        final TimestampColumnOption columnOption = configMapper.map(columnConfig.getOption(), TimestampColumnOption.class);
         return TimestampFormatter.builder(columnOption.getFormat().orElse(task.getDefaultTimestampFormat()), true)
                 .setDefaultZoneFromString(columnOption.getTimeZoneId().orElse(task.getDefaultTimeZoneId()))
                 .setDefaultDateFromString(columnOption.getDate().orElse(task.getDefaultDate()))

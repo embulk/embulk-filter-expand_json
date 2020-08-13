@@ -5,11 +5,8 @@ import com.jayway.jsonpath.spi.cache.Cache;
 import com.jayway.jsonpath.spi.cache.CacheProvider;
 import com.jayway.jsonpath.spi.cache.LRUCache;
 import com.jayway.jsonpath.spi.cache.NOOPCache;
-import org.embulk.config.Config;
-import org.embulk.config.ConfigDefault;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
-import org.embulk.config.Task;
 import org.embulk.config.TaskSource;
 import org.embulk.spi.Column;
 import org.embulk.spi.ColumnConfig;
@@ -17,6 +14,12 @@ import org.embulk.spi.FilterPlugin;
 import org.embulk.spi.PageOutput;
 import org.embulk.spi.Schema;
 import org.embulk.spi.type.Types;
+import org.embulk.util.config.Config;
+import org.embulk.util.config.ConfigDefault;
+import org.embulk.util.config.ConfigMapper;
+import org.embulk.util.config.ConfigMapperFactory;
+import org.embulk.util.config.Task;
+import org.embulk.util.config.TaskMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -30,6 +33,11 @@ public class ExpandJsonFilterPlugin
         implements FilterPlugin
 {
     private static final Logger logger = LoggerFactory.getLogger(ExpandJsonFilterPlugin.class);
+    private static final ConfigMapperFactory CONFIG_MAPPER_FACTORY = ConfigMapperFactory.builder().addDefaultModules().build();
+
+    static ConfigMapperFactory getConfigMapperFactory() {
+        return CONFIG_MAPPER_FACTORY;
+    }
 
     public interface PluginTask
             extends Task
@@ -80,7 +88,8 @@ public class ExpandJsonFilterPlugin
             throw new ConfigException("'time_zone' option will be deprecated");
         }
 
-        PluginTask task = config.loadConfig(PluginTask.class);
+        ConfigMapper configMapper = CONFIG_MAPPER_FACTORY.createConfigMapper();
+        PluginTask task = configMapper.map(config, PluginTask.class);
 
         // set cache provider
         task.getCacheProviderName().ifPresent(this::setCacheProvider);
@@ -103,7 +112,9 @@ public class ExpandJsonFilterPlugin
     public PageOutput open(TaskSource taskSource, final Schema inputSchema,
             final Schema outputSchema, final PageOutput output)
     {
-        final PluginTask task = taskSource.loadTask(PluginTask.class);
+        TaskMapper taskMapper = CONFIG_MAPPER_FACTORY.createTaskMapper();
+        PluginTask task = taskMapper.map(taskSource, PluginTask.class);
+
         // set cache provider for mapreduce executor.
         task.getCacheProviderName().ifPresent(this::setCacheProviderOrIgnore);
         return new FilteredPageOutput(task, inputSchema, outputSchema, output);

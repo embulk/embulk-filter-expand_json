@@ -1,6 +1,7 @@
 package org.embulk.filter.expand_json;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.base.Throwables;
 import com.google.common.collect.ImmutableList;
@@ -27,6 +28,7 @@ import org.embulk.spi.TestPageBuilderReader.MockPageOutput;
 import org.embulk.spi.time.Timestamp;
 import org.embulk.spi.type.Type;
 import org.embulk.spi.util.Pages;
+import org.embulk.util.config.ConfigMapper;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -46,6 +48,10 @@ import static org.embulk.spi.type.Types.JSON;
 import static org.embulk.spi.type.Types.LONG;
 import static org.embulk.spi.type.Types.STRING;
 import static org.embulk.spi.type.Types.TIMESTAMP;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.hasProperty;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.hamcrest.Matchers.startsWith;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -135,8 +141,12 @@ public class TestExpandJsonFilterPlugin
         ConfigSource config = getConfigFromYaml(configYaml);
 
         exception.expect(ConfigException.class);
-        exception.expectMessage("Field 'json_column_name' is required but not set");
-        config.loadConfig(PluginTask.class);
+        exception.expectMessage("Failed to map a JSON value into some object.");
+        exception.expectCause(allOf(
+                instanceOf(JsonMappingException.class),
+                hasProperty("message", startsWith("Field 'json_column_name' is required but not set."))));
+        final ConfigMapper configMapper = ExpandJsonFilterPlugin.getConfigMapperFactory().createConfigMapper();
+        configMapper.map(config, PluginTask.class);
     }
 
     @Test
@@ -189,8 +199,12 @@ public class TestExpandJsonFilterPlugin
         ConfigSource config = getConfigFromYaml(configYaml);
 
         exception.expect(ConfigException.class);
-        exception.expectMessage("Field 'expanded_columns' is required but not set");
-        config.loadConfig(PluginTask.class);
+        exception.expectMessage("Failed to map a JSON value into some object.");
+        exception.expectCause(allOf(
+                instanceOf(JsonMappingException.class),
+                hasProperty("message", startsWith("Field 'expanded_columns' is required but not set"))));
+        final ConfigMapper configMapper = ExpandJsonFilterPlugin.getConfigMapperFactory().createConfigMapper();
+        configMapper.map(config, PluginTask.class);
     }
 
     @Test
@@ -291,7 +305,8 @@ public class TestExpandJsonFilterPlugin
                 "  - {name: _j6, type: json}\n";
 
         ConfigSource config = getConfigFromYaml(configYaml);
-        PluginTask task = config.loadConfig(PluginTask.class);
+        final ConfigMapper configMapper = ExpandJsonFilterPlugin.getConfigMapperFactory().createConfigMapper();
+        PluginTask task = configMapper.map(config, PluginTask.class);
 
         assertEquals("$.", task.getRoot());
         assertEquals("UTC", task.getDefaultTimeZoneId());
