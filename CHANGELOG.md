@@ -1,3 +1,11 @@
+0.5.0 (2020-08-13)
+==================
+- [Enhancement] Run CIs on pull requests from forked repositories.
+  - https://github.com/civitaspo/embulk-filter-expand_json/pull/50
+- [Enhancement] Catch up with Embulk v0.10.6
+  - https://github.com/civitaspo/embulk-filter-expand_json/pull/48
+  - This change will still work correctly with Embulk v0.9.23.
+
 0.4.0 (2020-04-24)
 ==================
 - [Enhancement] Build with the "org.embulk.embulk-plugins" Gradle plugin
