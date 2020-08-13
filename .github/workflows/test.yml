@@ -1,7 +1,13 @@
 name: Test CI
 
 on:
-  - push
+  pull_request:
+    branches:
+      - 'master'
+    types: [opened, synchronize, closed]
+  push:
+    tags:
+      - '*'
 
 jobs:
   test:
