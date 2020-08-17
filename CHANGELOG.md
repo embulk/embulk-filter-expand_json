@@ -1,3 +1,8 @@
+0.5.1 (2020-08-17)
+==================
+- [Enhancement] Use embulk-util-config:0.1.1 instead of ConfigSource#loadConfig and TaskSource#loadTask
+  - https://github.com/civitaspo/embulk-filter-expand_json/pull/49
+
 0.5.0 (2020-08-13)
 ==================
 - [Enhancement] Run CIs on pull requests from forked repositories.

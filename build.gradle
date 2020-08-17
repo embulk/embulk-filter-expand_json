@@ -12,7 +12,7 @@ repositories {
 }
 
 group = "pro.civitaspo"
-version = "0.5.0"
+version = "0.5.1"
 description = "Expand Json"
 
 sourceCompatibility = 1.8
