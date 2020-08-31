@@ -1,3 +1,8 @@
+0.5.2 (2020-08-31)
+==================
+- [Enhancement] Update embulk-util-timestamp to 0.2.1
+  - https://github.com/civitaspo/embulk-filter-expand_json/pull/5
+
 0.5.1 (2020-08-17)
 ==================
 - [Enhancement] Use embulk-util-config:0.1.1 instead of ConfigSource#loadConfig and TaskSource#loadTask
