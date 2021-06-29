@@ -1,3 +1,10 @@
+0.5.3 (2021-06-29)
+==================
+- [Enhancement] Catch up with Embulk v0.10 API/SPI
+  - https://github.com/civitaspo/embulk-filter-expand_json/pull/55
+- [Enhancement] Rename the default branch: master -> main
+  - https://github.com/civitaspo/embulk-filter-expand_json/pull/56
+
 0.5.2 (2020-08-31)
 ==================
 - [Enhancement] Update embulk-util-timestamp to 0.2.1
