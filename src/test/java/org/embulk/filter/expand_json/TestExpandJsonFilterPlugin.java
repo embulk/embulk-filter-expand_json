@@ -17,7 +17,7 @@ import org.embulk.config.ConfigSource;
 import org.embulk.config.TaskSource;
 import org.embulk.spi.Column;
 import org.embulk.spi.DataException;
-import org.embulk.spi.Exec;
+import org.embulk.spi.ExecInternal;
 import org.embulk.spi.Page;
 import org.embulk.spi.PageOutput;
 import org.embulk.spi.PageReader;
@@ -107,7 +107,7 @@ public class TestExpandJsonFilterPlugin
 
     private ConfigSource getConfigFromYaml(String yaml)
     {
-        ConfigLoader loader = new ConfigLoader(Exec.getModelManager());
+        ConfigLoader loader = new ConfigLoader(ExecInternal.getModelManager());
         return loader.fromYamlString(yaml);
     }
 
@@ -141,7 +141,7 @@ public class TestExpandJsonFilterPlugin
         ConfigSource config = getConfigFromYaml(configYaml);
 
         exception.expect(ConfigException.class);
-        exception.expectMessage("Failed to map a JSON value into some object.");
+        exception.expectMessage("Failed to map Embulk's ConfigSource to org.embulk.filter.expand_json.ExpandJsonFilterPlugin$PluginTask: Field 'json_column_name' is required but not set.");
         exception.expectCause(allOf(
                 instanceOf(JsonMappingException.class),
                 hasProperty("message", startsWith("Field 'json_column_name' is required but not set."))));
@@ -199,7 +199,7 @@ public class TestExpandJsonFilterPlugin
         ConfigSource config = getConfigFromYaml(configYaml);
 
         exception.expect(ConfigException.class);
-        exception.expectMessage("Failed to map a JSON value into some object.");
+        exception.expectMessage("Failed to map Embulk's ConfigSource to org.embulk.filter.expand_json.ExpandJsonFilterPlugin$PluginTask: Field 'expanded_columns' is required but not set.");
         exception.expectCause(allOf(
                 instanceOf(JsonMappingException.class),
                 hasProperty("message", startsWith("Field 'expanded_columns' is required but not set"))));
