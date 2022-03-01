@@ -1,3 +1,9 @@
+0.5.4 (2022-03-02)
+==================
+
+- [Enhancement] setCacheProviderOrIgnore in transaction
+  - https://github.com/civitaspo/embulk-filter-expand_json/pull/58
+
 0.5.3 (2021-06-29)
 ==================
 - [Enhancement] Catch up with Embulk v0.10 API/SPI
