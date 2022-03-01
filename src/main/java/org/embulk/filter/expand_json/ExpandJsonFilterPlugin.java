@@ -92,7 +92,7 @@ public class ExpandJsonFilterPlugin
         PluginTask task = configMapper.map(config, PluginTask.class);
 
         // set cache provider
-        task.getCacheProviderName().ifPresent(this::setCacheProvider);
+        task.getCacheProviderName().ifPresent(this::setCacheProviderOrIgnore);
 
         // check if a column specified as json_column_name option exists or not
         Column jsonColumn = inputSchema.lookupColumn(task.getJsonColumnName());
