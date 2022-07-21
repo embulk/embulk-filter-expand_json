@@ -1,6 +1,4 @@
 plugins {
-    id "com.github.kt3k.coveralls" version "2.10.1"
-    id "jacoco"
     id "java"
     id "checkstyle"
     id "maven-publish"
@@ -128,13 +126,6 @@ gem {
 
 gemPush {
     host = "https://rubygems.org"
-}
-
-jacocoTestReport {
-    reports {
-        xml.enabled = true // coveralls plugin depends on xml format report
-        html.enabled = true
-    }
 }
 
 checkstyle {
