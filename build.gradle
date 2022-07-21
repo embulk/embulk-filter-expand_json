@@ -10,8 +10,8 @@ repositories {
     mavenCentral()
 }
 
-group = "pro.civitaspo"
-version = "0.5.4"
+group = "org.embulk"
+version = "0.6.0-SNAPSHOT"
 description = "Expand Json"
 
 sourceCompatibility = 1.8
