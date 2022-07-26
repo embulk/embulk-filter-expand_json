@@ -1,8 +1,7 @@
 # Expand Json filter plugin for Embulk
 
-[![Release CI Status Badge](https://github.com/civitaspo/embulk-filter-expand_json/workflows/Release%20CI/badge.svg)](https://github.com/civitaspo/embulk-filter-expand_json/actions?query=workflow%3A%22Release+CI%22)
+![Release Status](https://github.com/embulk/embulk-filter-expand_json/actions/workflows/publish.yml/badge.svg?branch=main)
 ![Build Status](https://github.com/embulk/embulk-filter-expand_json/actions/workflows/check.yml/badge.svg?branch=main)
-[![Coverage Status](https://coveralls.io/repos/civitaspo/embulk-filter-expand_json/badge.svg?branch=main&service=github)](https://coveralls.io/github/civitaspo/embulk-filter-expand_json?branch=main)
 
 expand columns having json into multiple columns
 
@@ -26,6 +25,7 @@ expand columns having json into multiple columns
   - `"NOOP"` becomes default in the future.
 
 ---
+
 **type of the column**
 
 |name|description|
@@ -35,7 +35,6 @@ expand columns having json into multiple columns
 |timestamp|Date and time with nano-seconds precision|
 |double|64-bit floating point numbers|
 |string|Strings|
-
 
 ## Example
 
@@ -56,7 +55,6 @@ filters:
       - {name: "profile.like_words[0]", type: string}
 ```
 
-
 ## Note
 - If the value evaluated by JsonPath is Array or Hash, the value is written as JSON.
 
@@ -73,7 +71,6 @@ filters:
 $ ./gradlew gem
 $ embulk run -Ibuild/gemContents/lib ./example/config.yml
 ```
-
 
 ### Build
 
@@ -96,8 +93,50 @@ So we do a benchmark about `cache_provider`. In our case, `cache_provider: noop`
 You can reproduce the bench by the below way.
 
 ```
-./gradlew classpath
+./gradlew gem
 ./bench/run.sh
+```
+
+For Maintainers
+----------------
+
+### Release
+
+Modify `version` in `build.gradle` at a detached commit, and then tag the commit with an annotation.
+
+```
+git checkout --detach master
+
+(Edit: Remove "-SNAPSHOT" in "version" in build.gradle.)
+
+git add build.gradle
+
+git commit -m "Release vX.Y.Z"
+
+git tag -a vX.Y.Z
+
+(Edit: Write a tag annotation in the changelog format.)
+```
+
+See [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) for the changelog format. We adopt a part of it for Git's tag annotation like below.
+
+```
+## [X.Y.Z] - YYYY-MM-DD
+
+### Added
+- Added a feature.
+
+### Changed
+- Changed something.
+
+### Fixed
+- Fixed a bug.
+```
+
+Push the annotated tag, then. It triggers a release operation on GitHub Actions after approval.
+
+```
+git push -u origin vX.Y.Z
 ```
 
 ## Contributor

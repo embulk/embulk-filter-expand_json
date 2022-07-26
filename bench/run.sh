@@ -30,19 +30,19 @@ echo "[$(now)] Preparing ..."
 echo "[$(now)] Run No expand_json"
 (
     cd $BENCH_ROOT
-    time embulk run -I ../lib -b . config_raw.yml
+    time embulk run -I ../build/gemContents/lib -b . config_raw.yml
 )
 
 echo "[$(now)] Run Default (LRUCache)"
 (
     cd $BENCH_ROOT
-    time embulk run -I ../lib -b . config_with_lru_cache.yml
+    time embulk run -I ../build/gemContents/lib -b . config_with_lru_cache.yml
 )
 
 echo "[$(now)] Run with NOOPCache"
 (
     cd $BENCH_ROOT
-    time embulk run -I ../lib -b . config_with_noop_cache.yml
+    time embulk run -I ../build/gemContents/lib -b . config_with_noop_cache.yml
 )
 
 echo "[$(now)] Teardown..."
