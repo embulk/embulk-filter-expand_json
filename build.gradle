@@ -15,6 +15,11 @@ description = "Expand Json"
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
+java {
+    withJavadocJar()
+    withSourcesJar()
+}
+
 dependencies {
     compileOnly("org.embulk:embulk-api:0.10.31")
     compileOnly("org.embulk:embulk-spi:0.10.31")
@@ -73,6 +78,27 @@ embulkPlugin {
     type = "expand_json"
 }
 
+jar {
+    metaInf {
+        from rootProject.file("LICENSE")
+        from rootProject.file("NOTICE")
+    }
+}
+
+sourcesJar {
+    metaInf {
+        from rootProject.file("LICENSE")
+        from rootProject.file("NOTICE")
+    }
+}
+
+javadocJar {
+    metaInf {
+        from rootProject.file("LICENSE")
+        from rootProject.file("NOTICE")
+    }
+}
+
 publishing {
     publications {
         maven(MavenPublication) {
@@ -88,24 +114,27 @@ publishing {
 
                 name = project.name
                 description = project.description
-                url = "https://github.com/civitaspo/embulk-filter-expand_json"
+                url = "https://github.com/embulk/embulk-filter-expand_json"
 
                 licenses {
                     license {
                         // http://central.sonatype.org/pages/requirements.html#license-information
-                        name = "MIT License"
-                        url = "https://www.opensource.org/licenses/mit-license.php"
+                        name = "The Apache License, Version 2.0"
+                        url = "https://www.apache.org/licenses/LICENSE-2.0.txt"
                     }
                 }
 
                 developers {
-                    // TODO: Set <developers> if released for Maven Central.
+                    developer {
+                        name = "Takahiro Nakayama"
+                        email = "civitaspo@gmail.com"
+                    }
                 }
 
                 scm {
-                    connection = "scm:git:git://github.com/civitaspo/embulk-filter-expand_json.git"
-                    developerConnection = "scm:git:git@github.com:civitaspo/embulk-filter-expand_json.git"
-                    url = "https://github.com/civitaspo/embulk-filter-expand_json"
+                    connection = "scm:git:git://github.com/embulk/embulk-filter-expand_json.git"
+                    developerConnection = "scm:git:git@github.com:embulk/embulk-filter-expand_json.git"
+                    url = "https://github.com/embulk/embulk-filter-expand_json"
                 }
             }
         }
@@ -120,8 +149,12 @@ gem {
     authors = [ "Civitaspo" ]
     email = [ "civitaspo@gmail.com" ]
     summary = "Expand Json filter plugin for Embulk"
-    homepage = "https://github.com/civitaspo/embulk-filter-expand_json"
-    licenses = [ "MIT" ]
+    homepage = "https://github.com/embulk/embulk-filter-expand_json"
+    licenses = [ "Apache-2.0" ]
+
+    from rootProject.file("LICENSE")
+    from rootProject.file("NOTICE_GEM")
+    rename ("NOTICE_GEM", "NOTICE")
 }
 
 gemPush {
