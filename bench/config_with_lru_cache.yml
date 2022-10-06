@@ -16,11 +16,7 @@ filters:
       - {name: "app_id", type: long}
       - {name: "point", type: double}
       - {name: "created_at", type: timestamp, format: "%Y-%m-%d"}
-      - {name: "profile.anniversary.et", type: string}
-      - {name: "profile.anniversary", type: string}
-      - {name: "profile.like_words[1]", type: string}
-      - {name: "profile.like_words[2]", type: string}
-      - {name: "profile.like_words", type: string}
+      - {name: "profile", type: json}
 
 out:
   type: "null"

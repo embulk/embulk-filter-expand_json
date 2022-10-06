@@ -20,7 +20,7 @@ echo "[$(now)] Preparing ..."
         rm -f $TMP_DATA_FILE
     fi
     for n in {1..100}; do
-        cat ../example/data.tsv | cut -f5 >> $TMP_DATA_FILE
+        cat ../example/data.tsv | cut -f5 | sed '1d' >> $TMP_DATA_FILE
     done
     for n in {1..1000}; do
         cat $TMP_DATA_FILE >> $DATA_FILE
