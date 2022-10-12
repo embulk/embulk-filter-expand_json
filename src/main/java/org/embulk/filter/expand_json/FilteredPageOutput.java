@@ -43,6 +43,8 @@ import org.embulk.util.config.units.ColumnConfig;
 import org.embulk.util.json.JsonParseException;
 import org.embulk.util.json.JsonParser;
 import org.embulk.util.timestamp.TimestampFormatter;
+import org.msgpack.value.Value;
+import org.msgpack.value.ValueFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -311,64 +313,65 @@ public class FilteredPageOutput
     private void setExpandedJsonColumns()
             throws JsonProcessingException
     {
-        final ReadContext json;
+        final Map<Value, Value> map;
+
         if (pageReader.isNull(jsonColumn)) {
-            json = null;
+            map = null;
         }
         else {
-            String jsonObject;
+            final Value json;
+
             if (jsonColumn.getType().equals(Types.JSON)) {
-                jsonObject = pageReader.getJson(jsonColumn).toJson(); // TODO could use Value object directly and optimize this code
+                json = pageReader.getJson(jsonColumn);
             }
             else {
-                jsonObject = pageReader.getString(jsonColumn);
+                json = jsonParser.parse(pageReader.getString(jsonColumn));
             }
 
-            if (jsonObject == null || jsonObject.isEmpty()) {
-                json = null;
+            if (json == null) {
+                map = null;
             } else {
-                json = parseContext.parse(jsonObject);
+                map = json.asMapValue().map();
             }
         }
 
         for (ExpandedColumn expandedJsonColumn: expandedColumns) {
-            if (json == null) {
+            if (map == null) {
                 pageBuilder.setNull(expandedJsonColumn.getColumn());
                 continue;
             }
 
-            Object value = json.read(expandedJsonColumn.getJsonPath());
-            final String finalValue = convertJsonNodeAsString(value);
-            if (finalValue == null) {
+            final Value value = map.get(ValueFactory.newString(expandedJsonColumn.getKey()));
+            if (value == null) {
                 pageBuilder.setNull(expandedJsonColumn.getColumn());
                 continue;
             }
 
             if (Types.STRING.equals(expandedJsonColumn.getColumn().getType())) {
-                pageBuilder.setString(expandedJsonColumn.getColumn(), finalValue);
+                pageBuilder.setString(expandedJsonColumn.getColumn(), value.asStringValue().toString());
             }
             else if (Types.BOOLEAN.equals(expandedJsonColumn.getColumn().getType())) {
-                pageBuilder.setBoolean(expandedJsonColumn.getColumn(), Boolean.parseBoolean(finalValue));
+                pageBuilder.setBoolean(expandedJsonColumn.getColumn(), value.asBooleanValue().getBoolean());
             }
             else if (Types.DOUBLE.equals(expandedJsonColumn.getColumn().getType())) {
                 try {
-                    pageBuilder.setDouble(expandedJsonColumn.getColumn(), Double.parseDouble(finalValue));
+                    pageBuilder.setDouble(expandedJsonColumn.getColumn(), value.asFloatValue().toDouble());
                 }
                 catch (NumberFormatException e) {
-                    throw new JsonValueInvalidException(String.format("Failed to parse '%s' as double", finalValue), e);
+                    throw new JsonValueInvalidException(String.format("Failed to parse '%s' as double", expandedJsonColumn.getKey()), e);
                 }
             }
             else if (Types.LONG.equals(expandedJsonColumn.getColumn().getType())) {
                 try {
-                    pageBuilder.setLong(expandedJsonColumn.getColumn(), Long.parseLong(finalValue));
+                    pageBuilder.setLong(expandedJsonColumn.getColumn(), value.asIntegerValue().toLong());
                 }
                 catch (NumberFormatException e) {
                     // ad-hoc workaround for exponential notation
                     try {
-                        pageBuilder.setLong(expandedJsonColumn.getColumn(), (long) Double.parseDouble(finalValue));
+                        pageBuilder.setLong(expandedJsonColumn.getColumn(), (long) value.asFloatValue().toDouble());
                     }
                     catch (NumberFormatException e2) {
-                        throw new JsonValueInvalidException(String.format("Failed to parse '%s' as long", finalValue), e);
+                        throw new JsonValueInvalidException(String.format("Failed to parse '%s' as long", expandedJsonColumn.getKey()), e);
                     }
                 }
             }
@@ -376,10 +379,10 @@ public class FilteredPageOutput
                 if (expandedJsonColumn.getTimestampFormatter().isPresent()) {
                     TimestampFormatter formatter = expandedJsonColumn.getTimestampFormatter().get();
                     try {
-                        pageBuilder.setTimestamp(expandedJsonColumn.getColumn(), Timestamp.ofInstant(formatter.parse(finalValue)));
+                        pageBuilder.setTimestamp(expandedJsonColumn.getColumn(), Timestamp.ofInstant(formatter.parse(value.asStringValue().asString())));
                     }
                     catch (DateTimeParseException e) {
-                        throw new JsonValueInvalidException(String.format("Failed to parse '%s' as timestamp", finalValue), e);
+                        throw new JsonValueInvalidException(String.format("Failed to parse '%s' as timestamp", value.asStringValue().asString()), e);
                     }
                 }
                 else {
@@ -388,10 +391,10 @@ public class FilteredPageOutput
             }
             else if (Types.JSON.equals(expandedJsonColumn.getColumn().getType())) {
                 try {
-                    pageBuilder.setJson(expandedJsonColumn.getColumn(), jsonParser.parse(finalValue));
+                    pageBuilder.setJson(expandedJsonColumn.getColumn(), value);
                 }
                 catch (JsonParseException e) {
-                    throw new JsonValueInvalidException(String.format("Failed to parse '%s' as JSON", finalValue), e);
+                    throw new JsonValueInvalidException(String.format("Failed to parse '%s' as JSON", expandedJsonColumn.getKey()), e);
                 }
             }
         }
