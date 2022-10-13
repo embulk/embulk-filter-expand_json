@@ -5,28 +5,18 @@ on:
       - "v0.*"
 jobs:
   publish:
-    environment:
-      name: maven-central-and-ruby-gems
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: true
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - name: Set up OpenJDK 8
-      uses: actions/setup-java@v2
+      uses: actions/setup-java@v3
       with:
         java-version: 8
         distribution: "temurin"
     - name: Publish
       run: |
-        mkdir -p $HOME/.gem
-        touch $HOME/.gem/credentials
-        chmod 0600 $HOME/.gem/credentials
-        printf -- "---\n:rubygems_api_key: ${RUBYGEMS_API_KEY}\n" > $HOME/.gem/credentials
-        ./gradlew --stacktrace publishMavenPublicationToMavenCentralRepository gemPush
-      env:
-        ORG_GRADLE_PROJECT_ossrhUsername: ${{ secrets.OSSRH_USERNAME }}
-        ORG_GRADLE_PROJECT_ossrhPassword: ${{ secrets.OSSRH_PASSWORD }}
-        ORG_GRADLE_PROJECT_signingKey: ${{ secrets.GPG_PRIVATE_KEY_ARMOR }}
-        ORG_GRADLE_PROJECT_signingPassword: ${{ secrets.GPG_PRIVATE_KEY_PASSWORD }}
-        RUBYGEMS_API_KEY: "${{secrets.RUBYGEMS_API_KEY}}"
+        mkdir -p ~/.gem
+        echo ":github: Bearer ${{ secrets.GITHUB_TOKEN }}" > ~/.gem/credentials
+        chmod 600 ~/.gem/credentials
+        ./gradlew gem
+        find ./build/gems -name 'embulk-filter-expand_json-*.gem' -maxdepth 1 -print0 | xargs -0 gem push --key github --host 'https://rubygems.pkg.github.com/calorie'
